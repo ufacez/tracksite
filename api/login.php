@@ -1,0 +1,104 @@
+<?php
+/**
+ * Login API Endpoint
+ * TrackSite Construction Management System
+ * 
+ * Handles AJAX login requests
+ */
+
+// Define constant to allow includes
+define('TRACKSITE_INCLUDED', true);
+
+// Set JSON header
+header('Content-Type: application/json');
+
+// Include required files
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/settings.php';
+require_once __DIR__ . '/../config/session.php';
+require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../includes/auth.php';
+
+// Initialize response
+$response = [
+    'success' => false,
+    'message' => '',
+    'redirect_url' => ''
+];
+
+try {
+    // Check if request is POST
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        $response['message'] = 'Invalid request method.';
+        echo json_encode($response);
+        exit();
+    }
+    
+    // Get and sanitize inputs
+    $username = isset($_POST['username']) ? sanitizeString($_POST['username']) : '';
+    $password = isset($_POST['password']) ? $_POST['password'] : '';
+    $remember = isset($_POST['remember']) ? true : false;
+    $redirect = isset($_POST['redirect']) ? $_POST['redirect'] : '';
+    
+    // Validate inputs
+    if (empty($username)) {
+        $response['message'] = 'Please enter your username or email.';
+        echo json_encode($response);
+        exit();
+    }
+    
+    if (empty($password)) {
+        $response['message'] = 'Please enter your password.';
+        echo json_encode($response);
+        exit();
+    }
+    
+    // Attempt authentication
+    $auth_result = authenticateUser($db, $username, $password);
+    
+    if (!$auth_result['success']) {
+        $response['message'] = $auth_result['message'];
+        echo json_encode($response);
+        exit();
+    }
+    
+    // Set user session
+    $user = $auth_result['user'];
+    setUserSession($user);
+    
+    // Handle "Remember Me"
+    if ($remember) {
+        // Set cookie for 30 days
+        $cookie_token = generateRandomString(32);
+        setcookie('remember_token', $cookie_token, time() + (86400 * 30), '/');
+        
+        // Store token in database (you can implement this later)
+        // For now, we'll just set the cookie
+    }
+    
+    // Determine redirect URL
+    if (!empty($redirect) && filter_var($redirect, FILTER_VALIDATE_URL)) {
+        $redirect_url = $redirect;
+    } else {
+        // Redirect based on user level
+        if ($user['user_level'] === USER_LEVEL_SUPER_ADMIN) {
+            $redirect_url = BASE_URL . '/modules/super_admin/dashboard.php';
+        } else {
+            $redirect_url = BASE_URL . '/modules/worker/dashboard.php';
+        }
+    }
+    
+    // Success response
+    $response['success'] = true;
+    $response['message'] = 'Login successful! Redirecting...';
+    $response['redirect_url'] = $redirect_url;
+    
+} catch (Exception $e) {
+    error_log("Login API Error: " . $e->getMessage());
+    $response['message'] = 'An unexpected error occurred. Please try again.';
+}
+
+// Send response
+echo json_encode($response);
+exit();
+?>
