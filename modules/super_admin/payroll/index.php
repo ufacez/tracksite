@@ -1,6 +1,6 @@
 <?php
 /**
- * Payroll Management - UPDATED with Simplified Deductions
+ * Payroll Management - FIXED with Proper Deductions Connection
  * TrackSite Construction Management System
  */
 
@@ -35,7 +35,7 @@ if ($day_of_month <= 15) {
     $period_end = $current_date->format('Y-m-t');
 }
 
-// Build query for payroll with SIMPLIFIED deductions (no dates)
+// Build query for payroll with PROPER deductions connection
 $sql = "SELECT 
     w.worker_id,
     w.worker_code,
@@ -61,21 +61,27 @@ $sql = "SELECT
         AND a.is_archived = FALSE 
         THEN a.attendance_date 
     END), 0)) as gross_pay,
-    COALESCE((SELECT SUM(amount) 
-        FROM deductions 
-        WHERE worker_id = w.worker_id 
-        AND is_active = 1
-        AND status = 'applied'
-        AND (frequency = 'per_payroll' 
-             OR (frequency = 'one_time' AND applied_count = 0))
+    COALESCE((
+        SELECT SUM(d.amount) 
+        FROM deductions d
+        WHERE d.worker_id = w.worker_id 
+        AND d.is_active = 1
+        AND d.status = 'applied'
+        AND (
+            d.frequency = 'per_payroll' 
+            OR (d.frequency = 'one_time' AND d.applied_count = 0)
+        )
     ), 0) as total_deductions,
-    COALESCE((SELECT COUNT(*) 
-        FROM deductions 
-        WHERE worker_id = w.worker_id 
-        AND is_active = 1
-        AND status = 'applied'
-        AND (frequency = 'per_payroll' 
-             OR (frequency = 'one_time' AND applied_count = 0))
+    COALESCE((
+        SELECT COUNT(*) 
+        FROM deductions d
+        WHERE d.worker_id = w.worker_id 
+        AND d.is_active = 1
+        AND d.status = 'applied'
+        AND (
+            d.frequency = 'per_payroll' 
+            OR (d.frequency = 'one_time' AND d.applied_count = 0)
+        )
     ), 0) as deduction_count,
     COALESCE(p.payment_status, 'unpaid') as payment_status,
     p.payroll_id
@@ -84,7 +90,7 @@ LEFT JOIN attendance a ON w.worker_id = a.worker_id
 LEFT JOIN payroll p ON w.worker_id = p.worker_id 
     AND p.pay_period_start = ? 
     AND p.pay_period_end = ?
-    AND p.is_archived = FALSE
+    AND (p.is_archived = FALSE OR p.is_archived IS NULL)
 WHERE w.employment_status = 'active' 
 AND w.is_archived = FALSE";
 
@@ -162,9 +168,7 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Payroll Management - <?php echo SYSTEM_NAME; ?></title>
-    <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css" 
-          integrity="sha384-AYmEC3Yw5cVb3ZcuHtOA93w35dYTsvhLPVnYs9eStHfGJvOvKxVfELGroGkvsg+p" 
-          crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css"/>
     <link rel="stylesheet" href="<?php echo CSS_URL; ?>/dashboard.css">
     <link rel="stylesheet" href="<?php echo CSS_URL; ?>/payroll.css">
 </head>
@@ -193,8 +197,8 @@ try {
                         <p class="subtitle">Manage worker payroll for <?php echo date('M d', strtotime($period_start)); ?> - <?php echo date('M d, Y', strtotime($period_end)); ?></p>
                     </div>
                     <div class="header-actions">
-                        <button class="btn btn-secondary" onclick="window.location.href='../deductions/add.php'">
-                            <i class="fas fa-minus-circle"></i> Add Deduction
+                        <button class="btn btn-secondary" onclick="window.location.href='../deductions/index.php'">
+                            <i class="fas fa-minus-circle"></i> Manage Deductions
                         </button>
                         <button class="btn btn-secondary" onclick="window.location.href='generate.php?start=<?php echo $period_start; ?>&end=<?php echo $period_end; ?>'">
                             <i class="fas fa-calculator"></i> Generate Payroll
@@ -214,6 +218,17 @@ try {
                                     <i class="fas fa-file-pdf"></i> Print / PDF
                                 </a>
                             </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Info Banner -->
+                <div class="info-banner">
+                    <div class="info-banner-content">
+                        <i class="fas fa-info-circle"></i>
+                        <div>
+                            <strong>How Deductions Work:</strong>
+                            <p>Deductions are automatically calculated when generating payroll. <strong>Recurring deductions</strong> apply to every payroll period. <strong>One-time deductions</strong> apply once and then become inactive. You can manage all deductions in the <a href="../deductions/index.php">Deductions module</a>.</p>
                         </div>
                     </div>
                 </div>
@@ -306,7 +321,7 @@ try {
                             </div>
                             
                             <button type="submit" class="btn btn-filter">
-                                <i class="fas fa-filter"></i> Apply Filter
+                                <i class="fas fa-filter"></i> Apply
                             </button>
                             
                             <?php if (!empty($position_filter) || !empty($status_filter) || !empty($search_query) || $date_range !== date('Y-m-d')): ?>
@@ -452,6 +467,48 @@ try {
     <script src="<?php echo JS_URL; ?>/payroll.js"></script>
     
     <style>
+        .info-banner {
+            background: linear-gradient(135deg, rgba(218, 165, 32, 0.1), rgba(184, 134, 11, 0.1));
+            border-left: 4px solid #DAA520;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .info-banner-content {
+            display: flex;
+            gap: 15px;
+            align-items: start;
+        }
+        
+        .info-banner-content i {
+            font-size: 24px;
+            color: #DAA520;
+            margin-top: 2px;
+        }
+        
+        .info-banner-content strong {
+            display: block;
+            margin-bottom: 5px;
+            color: #1a1a1a;
+        }
+        
+        .info-banner-content p {
+            margin: 0;
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        .info-banner-content a {
+            color: #DAA520;
+            font-weight: 600;
+            text-decoration: none;
+        }
+        
+        .info-banner-content a:hover {
+            text-decoration: underline;
+        }
+        
         .btn-group {
             position: relative;
             display: inline-block;

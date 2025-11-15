@@ -1,6 +1,6 @@
 <?php
 /**
- * Edit Deduction - Deductions Module
+ * Edit Deduction - FIXED VERSION
  * TrackSite Construction Management System
  */
 
@@ -50,8 +50,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_deduction'])) 
     $deduction_type = isset($_POST['deduction_type']) ? sanitizeString($_POST['deduction_type']) : '';
     $amount = isset($_POST['amount']) ? floatval($_POST['amount']) : 0;
     $description = isset($_POST['description']) ? sanitizeString($_POST['description']) : '';
-    $deduction_date = isset($_POST['deduction_date']) ? sanitizeString($_POST['deduction_date']) : '';
+    $frequency = isset($_POST['frequency']) ? sanitizeString($_POST['frequency']) : 'per_payroll';
     $status = isset($_POST['status']) ? sanitizeString($_POST['status']) : 'applied';
+    $is_active = isset($_POST['is_active']) ? 1 : 0;
     
     // Validation
     if (empty($deduction_type)) {
@@ -62,18 +63,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_deduction'])) 
         $errors[] = 'Amount must be greater than zero';
     }
     
-    if (empty($deduction_date)) {
-        $errors[] = 'Please select deduction date';
-    }
-    
     if (empty($errors)) {
         try {
             $stmt = $db->prepare("UPDATE deductions SET 
                 deduction_type = ?,
                 amount = ?,
                 description = ?,
-                deduction_date = ?,
+                frequency = ?,
                 status = ?,
+                is_active = ?,
                 updated_at = NOW()
                 WHERE deduction_id = ?");
             
@@ -81,8 +79,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_deduction'])) 
                 $deduction_type,
                 $amount,
                 $description,
-                $deduction_date,
+                $frequency,
                 $status,
+                $is_active,
                 $deduction_id
             ]);
             
@@ -105,9 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_deduction'])) 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit Deduction - <?php echo SYSTEM_NAME; ?></title>
-    <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css" 
-          integrity="sha384-AYmEC3Yw5cVb3ZcuHtOA93w35dYTsvhLPVnYs9eStHfGJvOvKxVfELGroGkvsg+p" 
-          crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css"/>
     <link rel="stylesheet" href="<?php echo CSS_URL; ?>/dashboard.css">
     <link rel="stylesheet" href="<?php echo CSS_URL; ?>/workers.css">
 </head>
@@ -188,6 +185,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_deduction'])) 
                                         <option value="pagibig" <?php echo $deduction['deduction_type'] === 'pagibig' ? 'selected' : ''; ?>>Pag-IBIG Fund</option>
                                         <option value="tax" <?php echo $deduction['deduction_type'] === 'tax' ? 'selected' : ''; ?>>Withholding Tax</option>
                                         <option value="loan" <?php echo $deduction['deduction_type'] === 'loan' ? 'selected' : ''; ?>>Loan Repayment</option>
+                                        <option value="cashadvance" <?php echo $deduction['deduction_type'] === 'cashadvance' ? 'selected' : ''; ?>>Cash Advance</option>
+                                        <option value="uniform" <?php echo $deduction['deduction_type'] === 'uniform' ? 'selected' : ''; ?>>Uniform</option>
+                                        <option value="tools" <?php echo $deduction['deduction_type'] === 'tools' ? 'selected' : ''; ?>>Tools/Equipment</option>
+                                        <option value="damage" <?php echo $deduction['deduction_type'] === 'damage' ? 'selected' : ''; ?>>Damage/Breakage</option>
+                                        <option value="absence" <?php echo $deduction['deduction_type'] === 'absence' ? 'selected' : ''; ?>>Absence</option>
                                         <option value="other" <?php echo $deduction['deduction_type'] === 'other' ? 'selected' : ''; ?>>Other</option>
                                     </select>
                                 </div>
@@ -206,22 +208,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_deduction'])) 
                                     </div>
                                 </div>
                                 
-                                <div class="form-group">
-                                    <label for="deduction_date">Deduction Date *</label>
-                                    <input type="date" 
-                                           name="deduction_date" 
-                                           id="deduction_date" 
-                                           value="<?php echo htmlspecialchars($deduction['deduction_date']); ?>"
-                                           required>
+                                <div class="form-group full-width">
+                                    <label for="frequency">Frequency *</label>
+                                    <select name="frequency" id="frequency" required>
+                                        <option value="per_payroll" <?php echo ($deduction['frequency'] ?? 'per_payroll') === 'per_payroll' ? 'selected' : ''; ?>>
+                                            Per Payroll (Recurring - applies to every payroll)
+                                        </option>
+                                        <option value="one_time" <?php echo ($deduction['frequency'] ?? '') === 'one_time' ? 'selected' : ''; ?>>
+                                            One-time (Applies once only)
+                                        </option>
+                                    </select>
+                                    <small>Choose "Per Payroll" for ongoing deductions. Choose "One-time" for one-off deductions.</small>
                                 </div>
                                 
                                 <div class="form-group">
                                     <label for="status">Status *</label>
                                     <select name="status" id="status" required>
-                                        <option value="applied" <?php echo $deduction['status'] === 'applied' ? 'selected' : ''; ?>>Applied</option>
-                                        <option value="pending" <?php echo $deduction['status'] === 'pending' ? 'selected' : ''; ?>>Pending</option>
+                                        <option value="applied" <?php echo $deduction['status'] === 'applied' ? 'selected' : ''; ?>>Applied (Active)</option>
+                                        <option value="pending" <?php echo $deduction['status'] === 'pending' ? 'selected' : ''; ?>>Pending (Not yet active)</option>
                                         <option value="cancelled" <?php echo $deduction['status'] === 'cancelled' ? 'selected' : ''; ?>>Cancelled</option>
                                     </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="is_active">
+                                        <input type="checkbox" 
+                                               name="is_active" 
+                                               id="is_active"
+                                               <?php echo ($deduction['is_active'] ?? 1) ? 'checked' : ''; ?>>
+                                        Active (uncheck to deactivate)
+                                    </label>
+                                    <small>Inactive deductions won't be applied to payroll</small>
                                 </div>
                                 
                                 <div class="form-group full-width">
@@ -233,6 +250,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_deduction'])) 
                                 </div>
                             </div>
                         </div>
+                        
+                        <?php if (!empty($deduction['applied_count']) && $deduction['applied_count'] > 0): ?>
+                        <div class="form-section" style="background: #fff3cd; border-left: 4px solid #ffc107;">
+                            <h3><i class="fas fa-info-circle"></i> Application History</h3>
+                            <p style="margin: 0; color: #856404;">
+                                This deduction has been applied <strong><?php echo $deduction['applied_count']; ?> time(s)</strong> to payroll.
+                            </p>
+                        </div>
+                        <?php endif; ?>
                         
                         <div class="form-actions">
                             <button type="button" class="btn btn-secondary" onclick="window.history.back()">
@@ -319,6 +345,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_deduction'])) 
             font-weight: 600;
         }
         
+        .form-group input[type="checkbox"] {
+            width: auto;
+            margin-right: 8px;
+        }
+        
         .form-group input,
         .form-group select,
         .form-group textarea {
@@ -340,6 +371,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_deduction'])) 
         .form-group input[readonly] {
             background: #f5f5f5;
             color: #666;
+        }
+        
+        .form-group small {
+            font-size: 11px;
+            color: #999;
+            margin-top: -4px;
         }
         
         .input-with-prefix {

@@ -1,6 +1,6 @@
 <?php
 /**
- * Deductions Management - SIMPLIFIED VERSION
+ * Deductions Management - FIXED VERSION
  * TrackSite Construction Management System
  */
 
@@ -146,9 +146,7 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Deductions Management - <?php echo SYSTEM_NAME; ?></title>
-    <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css" 
-          integrity="sha384-AYmEC3Yw5cVb3ZcuHtOA93w35dYTsvhLPVnYs9eStHfGJvOvKxVfELGroGkvsg+p" 
-          crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css"/>
     <link rel="stylesheet" href="<?php echo CSS_URL; ?>/dashboard.css">
     <link rel="stylesheet" href="<?php echo CSS_URL; ?>/workers.css">
 </head>
@@ -450,6 +448,27 @@ try {
         .status-inactive {
             background: #f8d7da;
             color: #721c24;
+        }
+        
+        .deduction-type-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .type-sss { background: #e3f2fd; color: #1976d2; }
+        .type-philhealth { background: #f3e5f5; color: #7b1fa2; }
+        .type-pagibig { background: #e8f5e9; color: #388e3c; }
+        .type-tax { background: #fff3e0; color: #f57c00; }
+        .type-loan { background: #ffebee; color: #c62828; }
+        .type-cashadvance { background: #e0f2f1; color: #00695c; }
+        .type-other { background: #f5f5f5; color: #616161; }
+        
+        @keyframes slideUp {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(-20px); }
         }
     </style>
 </body>
