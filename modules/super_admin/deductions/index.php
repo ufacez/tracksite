@@ -1,6 +1,6 @@
 <?php
 /**
- * Deductions Management - Main Page
+ * Deductions Management - SIMPLIFIED VERSION
  * TrackSite Construction Management System
  */
 
@@ -21,8 +21,6 @@ $flash = getFlashMessage();
 $worker_filter = isset($_GET['worker']) ? intval($_GET['worker']) : 0;
 $type_filter = isset($_GET['type']) ? sanitizeString($_GET['type']) : '';
 $status_filter = isset($_GET['status']) ? sanitizeString($_GET['status']) : '';
-$date_from = isset($_GET['date_from']) ? sanitizeString($_GET['date_from']) : '';
-$date_to = isset($_GET['date_to']) ? sanitizeString($_GET['date_to']) : '';
 $search_query = isset($_GET['search']) ? sanitizeString($_GET['search']) : '';
 
 // Handle delete action
@@ -30,7 +28,6 @@ if (isset($_POST['delete_deduction'])) {
     $deduction_id = intval($_POST['deduction_id']);
     
     try {
-        // Get deduction details before deletion
         $stmt = $db->prepare("SELECT d.*, w.first_name, w.last_name FROM deductions d
                              JOIN workers w ON d.worker_id = w.worker_id
                              WHERE d.deduction_id = ?");
@@ -49,6 +46,24 @@ if (isset($_POST['delete_deduction'])) {
     } catch (PDOException $e) {
         error_log("Delete Error: " . $e->getMessage());
         setFlashMessage('Failed to delete deduction', 'error');
+    }
+    
+    redirect($_SERVER['PHP_SELF']);
+}
+
+// Handle toggle active/inactive
+if (isset($_POST['toggle_deduction'])) {
+    $deduction_id = intval($_POST['deduction_id']);
+    
+    try {
+        $stmt = $db->prepare("UPDATE deductions SET is_active = NOT is_active WHERE deduction_id = ?");
+        $stmt->execute([$deduction_id]);
+        
+        logActivity($db, getCurrentUserId(), 'toggle_deduction', 'deductions', $deduction_id, 'Toggled deduction status');
+        setFlashMessage('Deduction status updated', 'success');
+    } catch (PDOException $e) {
+        error_log("Toggle Error: " . $e->getMessage());
+        setFlashMessage('Failed to update deduction', 'error');
     }
     
     redirect($_SERVER['PHP_SELF']);
@@ -75,18 +90,11 @@ if (!empty($type_filter)) {
 }
 
 if (!empty($status_filter)) {
-    $sql .= " AND d.status = ?";
-    $params[] = $status_filter;
-}
-
-if (!empty($date_from)) {
-    $sql .= " AND d.deduction_date >= ?";
-    $params[] = $date_from;
-}
-
-if (!empty($date_to)) {
-    $sql .= " AND d.deduction_date <= ?";
-    $params[] = $date_to;
+    if ($status_filter === 'active') {
+        $sql .= " AND d.is_active = 1";
+    } else {
+        $sql .= " AND d.is_active = 0";
+    }
 }
 
 if (!empty($search_query)) {
@@ -98,7 +106,7 @@ if (!empty($search_query)) {
     $params[] = $search_param;
 }
 
-$sql .= " ORDER BY d.deduction_date DESC, d.created_at DESC";
+$sql .= " ORDER BY d.is_active DESC, d.created_at DESC";
 
 try {
     $stmt = $db->prepare($sql);
@@ -110,29 +118,13 @@ try {
 }
 
 // Calculate statistics
-$total_deductions = 0;
-$total_sss = 0;
-$total_philhealth = 0;
-$total_pagibig = 0;
-$total_other = 0;
-
+$total_active = 0;
+$total_monthly = 0;
 foreach ($deductions as $ded) {
-    if ($ded['status'] === 'applied') {
-        $total_deductions += $ded['amount'];
-        
-        switch ($ded['deduction_type']) {
-            case 'sss':
-                $total_sss += $ded['amount'];
-                break;
-            case 'philhealth':
-                $total_philhealth += $ded['amount'];
-                break;
-            case 'pagibig':
-                $total_pagibig += $ded['amount'];
-                break;
-            default:
-                $total_other += $ded['amount'];
-                break;
+    if ($ded['is_active'] && $ded['status'] === 'applied') {
+        $total_active++;
+        if ($ded['frequency'] === 'per_payroll') {
+            $total_monthly += $ded['amount'];
         }
     }
 }
@@ -182,7 +174,7 @@ try {
                 <div class="page-header">
                     <div class="header-left">
                         <h1><i class="fas fa-minus-circle"></i> Deductions Management</h1>
-                        <p class="subtitle">Manage worker deductions (SSS, PhilHealth, Pag-IBIG, etc.)</p>
+                        <p class="subtitle">Manage worker deductions (applies to all payrolls)</p>
                     </div>
                     <div class="header-actions">
                         <button class="btn btn-primary" onclick="window.location.href='add.php'">
@@ -192,44 +184,34 @@ try {
                 </div>
                 
                 <!-- Statistics Cards -->
-                <div class="stats-cards" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 30px;">
+                <div class="stats-cards" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 30px;">
                     <div class="stat-card card-blue">
                         <div class="card-content">
-                            <div class="card-value">₱<?php echo number_format($total_sss, 2); ?></div>
-                            <div class="card-label">SSS Contributions</div>
+                            <div class="card-value"><?php echo $total_active; ?></div>
+                            <div class="card-label">Active Deductions</div>
                         </div>
                         <div class="card-icon">
-                            <i class="fas fa-shield-alt"></i>
+                            <i class="fas fa-check-circle"></i>
                         </div>
                     </div>
                     
                     <div class="stat-card card-green">
                         <div class="card-content">
-                            <div class="card-value">₱<?php echo number_format($total_philhealth, 2); ?></div>
-                            <div class="card-label">PhilHealth</div>
+                            <div class="card-value">₱<?php echo number_format($total_monthly, 2); ?></div>
+                            <div class="card-label">Total Per Payroll</div>
                         </div>
                         <div class="card-icon">
-                            <i class="fas fa-heartbeat"></i>
-                        </div>
-                    </div>
-                    
-                    <div class="stat-card card-orange">
-                        <div class="card-content">
-                            <div class="card-value">₱<?php echo number_format($total_pagibig, 2); ?></div>
-                            <div class="card-label">Pag-IBIG Fund</div>
-                        </div>
-                        <div class="card-icon">
-                            <i class="fas fa-home"></i>
+                            <i class="fas fa-calendar-check"></i>
                         </div>
                     </div>
                     
                     <div class="stat-card card-purple">
                         <div class="card-content">
-                            <div class="card-value">₱<?php echo number_format($total_deductions, 2); ?></div>
+                            <div class="card-value"><?php echo count($deductions); ?></div>
                             <div class="card-label">Total Deductions</div>
                         </div>
                         <div class="card-icon">
-                            <i class="fas fa-calculator"></i>
+                            <i class="fas fa-list"></i>
                         </div>
                     </div>
                 </div>
@@ -258,6 +240,7 @@ try {
                                     <option value="pagibig" <?php echo $type_filter === 'pagibig' ? 'selected' : ''; ?>>Pag-IBIG</option>
                                     <option value="tax" <?php echo $type_filter === 'tax' ? 'selected' : ''; ?>>Tax</option>
                                     <option value="loan" <?php echo $type_filter === 'loan' ? 'selected' : ''; ?>>Loan</option>
+                                    <option value="cashadvance" <?php echo $type_filter === 'cashadvance' ? 'selected' : ''; ?>>Cash Advance</option>
                                     <option value="other" <?php echo $type_filter === 'other' ? 'selected' : ''; ?>>Other</option>
                                 </select>
                             </div>
@@ -265,24 +248,9 @@ try {
                             <div class="filter-group">
                                 <select name="status" onchange="document.getElementById('filterForm').submit()">
                                     <option value="">All Status</option>
-                                    <option value="pending" <?php echo $status_filter === 'pending' ? 'selected' : ''; ?>>Pending</option>
-                                    <option value="applied" <?php echo $status_filter === 'applied' ? 'selected' : ''; ?>>Applied</option>
-                                    <option value="cancelled" <?php echo $status_filter === 'cancelled' ? 'selected' : ''; ?>>Cancelled</option>
+                                    <option value="active" <?php echo $status_filter === 'active' ? 'selected' : ''; ?>>Active</option>
+                                    <option value="inactive" <?php echo $status_filter === 'inactive' ? 'selected' : ''; ?>>Inactive</option>
                                 </select>
-                            </div>
-                            
-                            <div class="filter-group">
-                                <input type="date" 
-                                       name="date_from" 
-                                       value="<?php echo htmlspecialchars($date_from); ?>" 
-                                       placeholder="From Date">
-                            </div>
-                            
-                            <div class="filter-group">
-                                <input type="date" 
-                                       name="date_to" 
-                                       value="<?php echo htmlspecialchars($date_to); ?>" 
-                                       placeholder="To Date">
                             </div>
                             
                             <div class="filter-group" style="flex: 2;">
@@ -296,7 +264,7 @@ try {
                                 <i class="fas fa-filter"></i> Filter
                             </button>
                             
-                            <?php if (!empty($worker_filter) || !empty($type_filter) || !empty($status_filter) || !empty($date_from) || !empty($date_to) || !empty($search_query)): ?>
+                            <?php if (!empty($worker_filter) || !empty($type_filter) || !empty($status_filter) || !empty($search_query)): ?>
                             <button type="button" 
                                     class="btn btn-secondary" 
                                     onclick="window.location.href='index.php'">
@@ -320,17 +288,16 @@ try {
                                     <th>Worker</th>
                                     <th>Type</th>
                                     <th>Amount</th>
+                                    <th>Frequency</th>
                                     <th>Description</th>
-                                    <th>Date</th>
                                     <th>Status</th>
-                                    <th>Created By</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php if (empty($deductions)): ?>
                                 <tr>
-                                    <td colspan="8" class="no-data">
+                                    <td colspan="7" class="no-data">
                                         <i class="fas fa-minus-circle"></i>
                                         <p>No deductions found</p>
                                         <button class="btn btn-sm btn-primary" onclick="window.location.href='add.php'">
@@ -340,7 +307,7 @@ try {
                                 </tr>
                                 <?php else: ?>
                                     <?php foreach ($deductions as $ded): ?>
-                                    <tr>
+                                    <tr class="<?php echo !$ded['is_active'] ? 'inactive-row' : ''; ?>">
                                         <td>
                                             <div class="worker-info">
                                                 <div class="worker-avatar">
@@ -363,22 +330,41 @@ try {
                                         </td>
                                         <td><strong style="color: #dc3545;">₱<?php echo number_format($ded['amount'], 2); ?></strong></td>
                                         <td>
+                                            <?php if ($ded['frequency'] === 'per_payroll'): ?>
+                                                <span class="frequency-badge recurring">
+                                                    <i class="fas fa-sync-alt"></i> Recurring
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="frequency-badge onetime">
+                                                    <i class="fas fa-clock"></i> One-time
+                                                </span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
                                             <small><?php echo htmlspecialchars($ded['description'] ?? 'No description'); ?></small>
                                         </td>
-                                        <td><?php echo formatDate($ded['deduction_date']); ?></td>
                                         <td>
-                                            <span class="status-badge status-<?php echo $ded['status']; ?>">
-                                                <?php echo ucfirst($ded['status']); ?>
-                                            </span>
+                                            <?php if ($ded['is_active']): ?>
+                                                <span class="status-badge status-active">
+                                                    <i class="fas fa-check-circle"></i> Active
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="status-badge status-inactive">
+                                                    <i class="fas fa-times-circle"></i> Inactive
+                                                </span>
+                                            <?php endif; ?>
                                         </td>
-                                        <td><small><?php echo htmlspecialchars($ded['created_by_name'] ?? 'System'); ?></small></td>
                                         <td>
                                             <div class="action-buttons">
-                                                <button class="action-btn btn-view" 
-                                                        onclick="viewDeduction(<?php echo $ded['deduction_id']; ?>)"
-                                                        title="View Details">
-                                                    <i class="fas fa-eye"></i>
-                                                </button>
+                                                <form method="POST" style="display: inline;">
+                                                    <input type="hidden" name="deduction_id" value="<?php echo $ded['deduction_id']; ?>">
+                                                    <button type="submit" 
+                                                            name="toggle_deduction"
+                                                            class="action-btn <?php echo $ded['is_active'] ? 'btn-warning' : 'btn-success'; ?>" 
+                                                            title="<?php echo $ded['is_active'] ? 'Deactivate' : 'Activate'; ?>">
+                                                        <i class="fas fa-<?php echo $ded['is_active'] ? 'pause' : 'play'; ?>"></i>
+                                                    </button>
+                                                </form>
                                                 <button class="action-btn btn-edit" 
                                                         onclick="window.location.href='edit.php?id=<?php echo $ded['deduction_id']; ?>'"
                                                         title="Edit">
@@ -407,211 +393,63 @@ try {
         </div>
     </div>
     
-    <!-- View Modal -->
-    <div id="viewModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Deduction Details</h2>
-                <button class="modal-close" onclick="closeModal('viewModal')">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="modal-body" id="modalBody">
-                <div style="text-align: center; padding: 40px;">
-                    <i class="fas fa-spinner fa-spin" style="font-size: 32px; color: #DAA520;"></i>
-                    <p style="margin-top: 15px; color: #666;">Loading details...</p>
-                </div>
-            </div>
-        </div>
-    </div>
-    
     <script src="<?php echo JS_URL; ?>/dashboard.js"></script>
-    <script src="<?php echo JS_URL; ?>/workers.js"></script>
-    
     <script>
-        function viewDeduction(deductionId) {
-            showModal('viewModal');
-            
-            fetch(`view_deduction.php?id=${deductionId}`)
-                .then(response => response.text())
-                .then(html => {
-                    document.getElementById('modalBody').innerHTML = html;
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    document.getElementById('modalBody').innerHTML = `
-                        <div style="text-align: center; padding: 40px;">
-                            <i class="fas fa-exclamation-circle" style="font-size: 48px; color: #dc3545; margin-bottom: 15px;"></i>
-                            <p style="color: #666;">Failed to load deduction details</p>
-                        </div>
-                    `;
-                });
-        }
-        
-        function showModal(modalId) {
-            const modal = document.getElementById(modalId);
-            if (modal) {
-                modal.style.display = 'flex';
-                document.body.style.overflow = 'hidden';
-            }
-        }
-        
-        function closeModal(modalId) {
-            const modal = document.getElementById(modalId);
-            if (modal) {
-                modal.style.display = 'none';
-                document.body.style.overflow = 'auto';
-            }
-        }
-        
-        function closeAlert(alertId) {
-            const alert = document.getElementById(alertId);
+        function closeAlert(id) {
+            const alert = document.getElementById(id);
             if (alert) {
                 alert.style.animation = 'slideUp 0.3s ease-in';
                 setTimeout(() => alert.remove(), 300);
             }
         }
         
-        // Auto-dismiss alerts
         setTimeout(() => {
             const flashMessage = document.getElementById('flashMessage');
             if (flashMessage) closeAlert('flashMessage');
         }, 5000);
-        
-        // Close modal on outside click
-        window.onclick = function(event) {
-            if (event.target.classList.contains('modal')) {
-                event.target.style.display = 'none';
-                document.body.style.overflow = 'auto';
-            }
-        }
     </script>
     
     <style>
-        .deduction-type-badge {
+        .frequency-badge {
             display: inline-block;
             padding: 4px 10px;
             border-radius: 12px;
             font-size: 11px;
             font-weight: 600;
-            text-transform: uppercase;
         }
         
-        .type-sss {
+        .frequency-badge.recurring {
             background: #e3f2fd;
             color: #1976d2;
         }
         
-        .type-philhealth {
-            background: #f3e5f5;
-            color: #7b1fa2;
-        }
-        
-        .type-pagibig {
-            background: #e8f5e9;
-            color: #388e3c;
-        }
-        
-        .type-tax {
+        .frequency-badge.onetime {
             background: #fff3e0;
             color: #f57c00;
         }
         
-        .type-loan {
-            background: #ffebee;
-            color: #c62828;
+        .inactive-row {
+            opacity: 0.5;
         }
         
-        .type-other {
-            background: #f5f5f5;
-            color: #616161;
-        }
-        
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 10000;
+        .status-badge {
+            display: inline-flex;
             align-items: center;
-            justify-content: center;
-        }
-        
-        .modal-content {
-            background: #fff;
+            gap: 5px;
+            padding: 4px 10px;
             border-radius: 12px;
-            width: 90%;
-            max-width: 600px;
-            max-height: 90vh;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            animation: slideDown 0.3s ease-out;
+            font-size: 11px;
+            font-weight: 600;
         }
         
-        .modal-header {
-            padding: 20px 25px;
-            border-bottom: 1px solid #e0e0e0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .status-active {
+            background: #d4edda;
+            color: #155724;
         }
         
-        .modal-header h2 {
-            margin: 0;
-            font-size: 20px;
-            color: #1a1a1a;
-        }
-        
-        .modal-close {
-            background: none;
-            border: none;
-            font-size: 24px;
-            color: #666;
-            cursor: pointer;
-            padding: 0;
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            transition: all 0.3s ease;
-        }
-        
-        .modal-close:hover {
-            background: #f0f0f0;
-            color: #1a1a1a;
-        }
-        
-        .modal-body {
-            padding: 25px;
-            overflow-y: auto;
-        }
-        
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-50px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        @keyframes slideUp {
-            from {
-                opacity: 1;
-                transform: translateY(0);
-            }
-            to {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
+        .status-inactive {
+            background: #f8d7da;
+            color: #721c24;
         }
     </style>
 </body>

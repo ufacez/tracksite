@@ -1,6 +1,6 @@
 <?php
 /**
- * Payroll Management - UPDATED with Stackable Deductions Support
+ * Payroll Management - UPDATED with Simplified Deductions
  * TrackSite Construction Management System
  */
 
@@ -35,7 +35,7 @@ if ($day_of_month <= 15) {
     $period_end = $current_date->format('Y-m-t');
 }
 
-// Build query for payroll with STACKABLE deductions support
+// Build query for payroll with SIMPLIFIED deductions (no dates)
 $sql = "SELECT 
     w.worker_id,
     w.worker_code,
@@ -64,13 +64,19 @@ $sql = "SELECT
     COALESCE((SELECT SUM(amount) 
         FROM deductions 
         WHERE worker_id = w.worker_id 
-        AND deduction_date BETWEEN ? AND ?
-        AND status = 'applied'), 0) as total_deductions,
+        AND is_active = 1
+        AND status = 'applied'
+        AND (frequency = 'per_payroll' 
+             OR (frequency = 'one_time' AND applied_count = 0))
+    ), 0) as total_deductions,
     COALESCE((SELECT COUNT(*) 
         FROM deductions 
         WHERE worker_id = w.worker_id 
-        AND deduction_date BETWEEN ? AND ?
-        AND status = 'applied'), 0) as deduction_count,
+        AND is_active = 1
+        AND status = 'applied'
+        AND (frequency = 'per_payroll' 
+             OR (frequency = 'one_time' AND applied_count = 0))
+    ), 0) as deduction_count,
     COALESCE(p.payment_status, 'unpaid') as payment_status,
     p.payroll_id
 FROM workers w
@@ -86,8 +92,6 @@ $params = [
     $period_start, $period_end,  // days_worked
     $period_start, $period_end,  // total_hours
     $period_start, $period_end,  // gross_pay
-    $period_start, $period_end,  // total_deductions
-    $period_start, $period_end,  // deduction_count
     $period_start, $period_end   // payroll join
 ];
 
@@ -234,7 +238,7 @@ try {
                         <div class="stat-info">
                             <div class="stat-label">Total Deductions</div>
                             <div class="stat-value">₱<?php echo number_format($total_deductions, 2); ?></div>
-                            <div class="stat-sublabel">All Deductions Applied</div>
+                            <div class="stat-sublabel">Active Deductions</div>
                         </div>
                     </div>
                     
@@ -379,7 +383,7 @@ try {
                                             <span style="color: #dc3545;">₱<?php echo number_format($record['total_deductions'], 2); ?></span>
                                             <?php if ($record['deduction_count'] > 0): ?>
                                                 <small style="display: block; color: #666;">
-                                                    <i class="fas fa-layer-group"></i> <?php echo $record['deduction_count']; ?> item(s)
+                                                    <i class="fas fa-layer-group"></i> <?php echo $record['deduction_count']; ?> active
                                                 </small>
                                             <?php endif; ?>
                                         </td>
@@ -516,7 +520,6 @@ try {
             menu.classList.toggle('show');
         }
         
-        // Close export menu when clicking outside
         document.addEventListener('click', function(event) {
             const menu = document.getElementById('exportMenu');
             const btnGroup = event.target.closest('.btn-group');
