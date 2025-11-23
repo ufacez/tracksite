@@ -1,5 +1,5 @@
 /**
- * Cash Advance JavaScript - COMPLETE WORKING VERSION
+ * Cash Advance JavaScript - COMPLETE FIXED VERSION
  * TrackSite Construction Management System
  */
 

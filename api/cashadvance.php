@@ -1,6 +1,6 @@
 <?php
 /**
- * Cash Advance API - FIXED VERSION
+ * Cash Advance API - COMPLETE FIXED VERSION
  * TrackSite Construction Management System
  */
 
@@ -21,7 +21,14 @@ if (!isLoggedIn()) {
     exit;
 }
 
+// Check for super admin (approve/reject requires admin)
 $action = isset($_REQUEST['action']) ? sanitizeString($_REQUEST['action']) : '';
+$requiresAdmin = in_array($action, ['approve', 'reject', 'record_payment']);
+
+if ($requiresAdmin && !isSuperAdmin()) {
+    echo json_encode(['success' => false, 'message' => 'Admin privileges required']);
+    exit;
+}
 
 try {
     switch ($action) {
@@ -61,9 +68,6 @@ try {
             break;
             
         case 'approve':
-            // Approve cash advance
-            requireSuperAdmin();
-            
             $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
             $installments = isset($_POST['installments']) ? intval($_POST['installments']) : 0;
             
@@ -97,50 +101,53 @@ try {
             
             $db->beginTransaction();
             
-            // Update cash advance status
-            $stmt = $db->prepare("UPDATE cash_advances SET 
-                status = 'approved',
-                approved_by = ?,
-                approval_date = NOW(),
-                installments = ?,
-                updated_at = NOW()
-                WHERE advance_id = ?");
-            $stmt->execute([getCurrentUserId(), $installments, $id]);
-            
-            // Calculate installment amount
-            $installment_amount = $advance['amount'] / $installments;
-            
-            // Create automatic deduction
-            $stmt = $db->prepare("INSERT INTO deductions 
-                (worker_id, deduction_type, amount, description, frequency, status, is_active, created_by, created_at)
-                VALUES (?, 'cashadvance', ?, ?, 'per_payroll', 'applied', 1, ?, NOW())");
-            $stmt->execute([
-                $advance['worker_id'],
-                $installment_amount,
-                "Cash Advance Repayment - {$installments} installments of ₱" . number_format($installment_amount, 2),
-                getCurrentUserId()
-            ]);
-            
-            $db->commit();
-            
-            // Log activity
-            logActivity($db, getCurrentUserId(), 'approve_cashadvance', 'cash_advances', $id,
-                "Approved cash advance for {$advance['first_name']} {$advance['last_name']} - ₱" . number_format($advance['amount'], 2));
-            
-            echo json_encode([
-                'success' => true, 
-                'message' => 'Cash advance approved successfully!',
-                'data' => [
-                    'installment_amount' => $installment_amount,
-                    'installments' => $installments
-                ]
-            ]);
+            try {
+                // Update cash advance status
+                $stmt = $db->prepare("UPDATE cash_advances SET 
+                    status = 'approved',
+                    approved_by = ?,
+                    approval_date = NOW(),
+                    installments = ?,
+                    updated_at = NOW()
+                    WHERE advance_id = ?");
+                $stmt->execute([getCurrentUserId(), $installments, $id]);
+                
+                // Calculate installment amount
+                $installment_amount = $advance['amount'] / $installments;
+                
+                // Create automatic deduction
+                $stmt = $db->prepare("INSERT INTO deductions 
+                    (worker_id, deduction_type, amount, description, frequency, status, is_active, created_by, created_at)
+                    VALUES (?, 'cashadvance', ?, ?, 'per_payroll', 'applied', 1, ?, NOW())");
+                $stmt->execute([
+                    $advance['worker_id'],
+                    $installment_amount,
+                    "Cash Advance Repayment - {$installments} installments of ₱" . number_format($installment_amount, 2),
+                    getCurrentUserId()
+                ]);
+                
+                $db->commit();
+                
+                // Log activity
+                logActivity($db, getCurrentUserId(), 'approve_cashadvance', 'cash_advances', $id,
+                    "Approved cash advance for {$advance['first_name']} {$advance['last_name']} - ₱" . number_format($advance['amount'], 2));
+                
+                echo json_encode([
+                    'success' => true, 
+                    'message' => 'Cash advance approved successfully!',
+                    'data' => [
+                        'installment_amount' => $installment_amount,
+                        'installments' => $installments
+                    ]
+                ]);
+                
+            } catch (Exception $e) {
+                $db->rollBack();
+                throw $e;
+            }
             break;
             
         case 'reject':
-            // Reject cash advance
-            requireSuperAdmin();
-            
             $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
             $notes = isset($_POST['notes']) ? sanitizeString($_POST['notes']) : '';
             
@@ -188,9 +195,6 @@ try {
             break;
             
         case 'record_payment':
-            // Record repayment
-            requireSuperAdmin();
-            
             $advance_id = isset($_POST['advance_id']) ? intval($_POST['advance_id']) : 0;
             $amount = isset($_POST['amount']) ? floatval($_POST['amount']) : 0;
             $payment_method = isset($_POST['payment_method']) ? sanitizeString($_POST['payment_method']) : 'cash';
@@ -219,53 +223,59 @@ try {
             
             $db->beginTransaction();
             
-            // Record repayment
-            $stmt = $db->prepare("INSERT INTO cash_advance_repayments 
-                (advance_id, repayment_date, amount, payment_method, notes, created_by)
-                VALUES (?, ?, ?, ?, ?, ?)");
-            $stmt->execute([
-                $advance_id,
-                $repayment_date,
-                $amount,
-                $payment_method,
-                $notes,
-                getCurrentUserId()
-            ]);
-            
-            // Update cash advance balance
-            $new_balance = $advance['balance'] - $amount;
-            $new_repayment_amount = $advance['repayment_amount'] + $amount;
-            $new_status = $new_balance <= 0 ? 'completed' : 'repaying';
-            
-            $stmt = $db->prepare("UPDATE cash_advances SET 
-                balance = ?,
-                repayment_amount = ?,
-                status = ?,
-                completed_at = CASE WHEN ? = 'completed' THEN NOW() ELSE completed_at END,
-                updated_at = NOW()
-                WHERE advance_id = ?");
-            $stmt->execute([
-                $new_balance,
-                $new_repayment_amount,
-                $new_status,
-                $new_status,
-                $advance_id
-            ]);
-            
-            $db->commit();
-            
-            // Log activity
-            logActivity($db, getCurrentUserId(), 'record_cashadvance_payment', 'cash_advance_repayments', 
-                $db->lastInsertId(), "Recorded payment of ₱" . number_format($amount, 2));
-            
-            echo json_encode([
-                'success' => true, 
-                'message' => 'Payment recorded successfully!',
-                'data' => [
-                    'new_balance' => $new_balance,
-                    'status' => $new_status
-                ]
-            ]);
+            try {
+                // Record repayment
+                $stmt = $db->prepare("INSERT INTO cash_advance_repayments 
+                    (advance_id, repayment_date, amount, payment_method, notes, created_by)
+                    VALUES (?, ?, ?, ?, ?, ?)");
+                $stmt->execute([
+                    $advance_id,
+                    $repayment_date,
+                    $amount,
+                    $payment_method,
+                    $notes,
+                    getCurrentUserId()
+                ]);
+                
+                // Update cash advance balance
+                $new_balance = $advance['balance'] - $amount;
+                $new_repayment_amount = $advance['repayment_amount'] + $amount;
+                $new_status = $new_balance <= 0 ? 'completed' : 'repaying';
+                
+                $stmt = $db->prepare("UPDATE cash_advances SET 
+                    balance = ?,
+                    repayment_amount = ?,
+                    status = ?,
+                    completed_at = CASE WHEN ? = 'completed' THEN NOW() ELSE completed_at END,
+                    updated_at = NOW()
+                    WHERE advance_id = ?");
+                $stmt->execute([
+                    $new_balance,
+                    $new_repayment_amount,
+                    $new_status,
+                    $new_status,
+                    $advance_id
+                ]);
+                
+                $db->commit();
+                
+                // Log activity
+                logActivity($db, getCurrentUserId(), 'record_cashadvance_payment', 'cash_advance_repayments', 
+                    $db->lastInsertId(), "Recorded payment of ₱" . number_format($amount, 2));
+                
+                echo json_encode([
+                    'success' => true, 
+                    'message' => 'Payment recorded successfully!',
+                    'data' => [
+                        'new_balance' => $new_balance,
+                        'status' => $new_status
+                    ]
+                ]);
+                
+            } catch (Exception $e) {
+                $db->rollBack();
+                throw $e;
+            }
             break;
             
         default:
