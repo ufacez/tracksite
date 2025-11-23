@@ -32,55 +32,86 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         switch ($action) {
             case 'approve':
-                if (!isSuperAdmin()) {
-                    http_response_code(403);
-                    jsonError('Unauthorized access. Admin privileges required.');
-                }
-                
-                $advance_id = isset($_POST['id']) ? intval($_POST['id']) : 0;
-                
-                if ($advance_id <= 0) {
-                    http_response_code(400);
-                    jsonError('Invalid cash advance ID');
-                }
-                
-                // Get advance details
-                $stmt = $db->prepare("SELECT ca.*, w.first_name, w.last_name FROM cash_advances ca
-                                     JOIN workers w ON ca.worker_id = w.worker_id
-                                     WHERE ca.advance_id = ?");
-                $stmt->execute([$advance_id]);
-                $advance = $stmt->fetch();
-                
-                if (!$advance) {
-                    http_response_code(404);
-                    jsonError('Cash advance not found');
-                }
-                
-                if ($advance['status'] !== 'pending') {
-                    http_response_code(400);
-                    jsonError('Cash advance has already been processed');
-                }
-                
-                // Approve the advance
-                $stmt = $db->prepare("UPDATE cash_advances 
-                                     SET status = 'approved', 
-                                         approved_by = ?,
-                                         approval_date = NOW(),
-                                         updated_at = NOW()
-                                     WHERE advance_id = ?");
-                $stmt->execute([$user_id, $advance_id]);
-                
-                // Log activity
-                $worker_name = $advance['first_name'] . ' ' . $advance['last_name'];
-                logActivity($db, $user_id, 'approve_cashadvance', 'cash_advances', $advance_id,
-                           "Approved cash advance of ₱" . number_format($advance['amount'], 2) . " for {$worker_name}");
-                
-                http_response_code(200);
-                jsonSuccess('Cash advance approved successfully', [
-                    'advance_id' => $advance_id
-                ]);
-                break;
-                
+                            if (!isSuperAdmin()) {
+                                http_response_code(403);
+                                jsonError('Unauthorized access. Admin privileges required.');
+                            }
+                            
+                            $advance_id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+                            $installments = isset($_POST['installments']) ? intval($_POST['installments']) : 1;
+                            
+                            if ($advance_id <= 0) {
+                                http_response_code(400);
+                                jsonError('Invalid cash advance ID');
+                            }
+                            
+                            // Get advance details
+                            $stmt = $db->prepare("SELECT ca.*, w.first_name, w.last_name FROM cash_advances ca
+                                                JOIN workers w ON ca.worker_id = w.worker_id
+                                                WHERE ca.advance_id = ?");
+                            $stmt->execute([$advance_id]);
+                            $advance = $stmt->fetch();
+                            
+                            if (!$advance) {
+                                http_response_code(404);
+                                jsonError('Cash advance not found');
+                            }
+                            
+                            if ($advance['status'] !== 'pending') {
+                                http_response_code(400);
+                                jsonError('Cash advance has already been processed');
+                            }
+                            
+                            try {
+                                $db->beginTransaction();
+                                
+                                // Approve the advance
+                                $stmt = $db->prepare("UPDATE cash_advances 
+                                                    SET status = 'approved', 
+                                                        approved_by = ?,
+                                                        approval_date = NOW(),
+                                                        updated_at = NOW()
+                                                    WHERE advance_id = ?");
+                                $stmt->execute([$user_id, $advance_id]);
+                                
+                                // Calculate installment amount
+                                $installment_amount = $advance['amount'] / $installments;
+                                
+                                // Create recurring deduction for repayment
+                                $stmt = $db->prepare("INSERT INTO deductions 
+                                    (worker_id, deduction_type, amount, description, frequency, status, is_active, created_by)
+                                    VALUES (?, 'cashadvance', ?, ?, 'per_payroll', 'applied', 1, ?)");
+                                
+                                $description = "Cash Advance Repayment - ₱" . number_format($advance['amount'], 2) . 
+                                            " / " . $installments . " installments";
+                                
+                                $stmt->execute([
+                                    $advance['worker_id'],
+                                    $installment_amount,
+                                    $description,
+                                    $user_id
+                                ]);
+                                
+                                $db->commit();
+                                
+                                // Log activity
+                                $worker_name = $advance['first_name'] . ' ' . $advance['last_name'];
+                                logActivity($db, $user_id, 'approve_cashadvance', 'cash_advances', $advance_id,
+                                        "Approved cash advance of ₱" . number_format($advance['amount'], 2) . " for {$worker_name} with deduction created");
+                                
+                                http_response_code(200);
+                                jsonSuccess('Cash advance approved and deduction created successfully', [
+                                    'advance_id' => $advance_id,
+                                    'installment_amount' => $installment_amount
+                                ]);
+                                
+                            } catch (PDOException $e) {
+                                $db->rollBack();
+                                error_log("Approve Cash Advance Error: " . $e->getMessage());
+                                http_response_code(500);
+                                jsonError('Failed to approve cash advance');
+                            }
+                            break;
             case 'reject':
                 if (!isSuperAdmin()) {
                     http_response_code(403);

@@ -1,5 +1,5 @@
 /**
- * Cash Advance Module Styles
+ * Cash Advance Module Styles - FIXED
  * TrackSite Construction Management System
  */
 
@@ -7,6 +7,77 @@
    CASH ADVANCE PAGE LAYOUT
    ============================================ */
 
+.cashadvance-content {
+    padding: 90px 30px 30px 30px;
+}
+
+/* ============================================
+   PAGE HEADER
+   ============================================ */
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.header-left h1 {
+    font-size: 28px;
+    color: #1a1a1a;
+    margin: 0 0 5px 0;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.header-left .subtitle {
+    font-size: 14px;
+    color: #666;
+    margin: 0;
+}
+
+.header-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #DAA520, #B8860B);
+    color: #1a1a1a;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(218, 165, 32, 0.3);
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: #fff;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+    transform: translateY(-2px);
+}
 .cashadvance-content {
     padding: 90px 30px 30px 30px;
 }
@@ -421,3 +492,4 @@
         width: 100%;
     }
 }
+

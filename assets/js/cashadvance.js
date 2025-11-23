@@ -157,17 +157,30 @@ function displayCashAdvanceDetails(advance) {
     `;
 }
 
-/**
- * Approve Cash Advance
- */
+//**Approve Cash Advance */
 function approveAdvance(advanceId) {
-    if (!confirm('Approve this cash advance request?')) {
+    // First, get the advance amount and ask for installments
+    const installments = prompt('Enter number of installments (payroll periods) for repayment:\n\nExample: Enter 4 for 4 payroll periods', '2');
+    
+    if (installments === null) {
+        return; // User cancelled
+    }
+    
+    const installmentNum = parseInt(installments);
+    
+    if (isNaN(installmentNum) || installmentNum < 1) {
+        showAlert('Please enter a valid number of installments (minimum 1)', 'error');
+        return;
+    }
+    
+    if (!confirm(`Approve this cash advance?\n\nRepayment will be set to ${installmentNum} installment(s).\nA deduction will be automatically created.`)) {
         return;
     }
     
     const formData = new FormData();
     formData.append('action', 'approve');
     formData.append('id', advanceId);
+    formData.append('installments', installmentNum);
     
     fetch(`${baseUrl}/api/cashadvance.php`, {
         method: 'POST',
@@ -176,8 +189,8 @@ function approveAdvance(advanceId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            showAlert(data.message, 'success');
-            setTimeout(() => window.location.reload(), 1000);
+            showAlert(data.message + '\n\nDeduction of ₱' + data.data.installment_amount.toFixed(2) + ' per payroll has been created.', 'success');
+            setTimeout(() => window.location.reload(), 2000);
         } else {
             showAlert(data.message || 'Failed to approve', 'error');
         }
