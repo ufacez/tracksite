@@ -320,11 +320,14 @@ try {
                                                 </button>
                                                 
                                                 <?php if ($adv['status'] === 'pending'): ?>
+                                                    <!-- Approve Button -->
                                                     <button class="action-btn btn-success" 
                                                             onclick="approveAdvance(<?php echo $adv['advance_id']; ?>)"
                                                             title="Approve">
                                                         <i class="fas fa-check"></i>
                                                     </button>
+                                                    
+                                                    <!-- Reject Button -->
                                                     <button class="action-btn btn-delete" 
                                                             onclick="rejectAdvance(<?php echo $adv['advance_id']; ?>)"
                                                             title="Reject">
@@ -333,6 +336,7 @@ try {
                                                 <?php endif; ?>
                                                 
                                                 <?php if ($adv['status'] === 'approved' || $adv['status'] === 'repaying'): ?>
+                                                    <!-- Record Payment Button -->
                                                     <button class="action-btn btn-edit" 
                                                             onclick="window.location.href='repayment.php?id=<?php echo $adv['advance_id']; ?>'"
                                                             title="Record Payment">
@@ -341,6 +345,122 @@ try {
                                                 <?php endif; ?>
                                             </div>
                                         </td>
+
+                                        <!-- REQUIRED STYLES FOR BUTTONS -->
+                                        <style>
+                                        .action-buttons {
+                                            display: flex;
+                                            gap: 8px;
+                                            justify-content: flex-start;
+                                            flex-wrap: wrap;
+                                        }
+
+                                        .action-btn {
+                                            padding: 8px 12px;
+                                            border: none;
+                                            border-radius: 6px;
+                                            cursor: pointer;
+                                            transition: all 0.3s ease;
+                                            font-size: 14px;
+                                            display: inline-flex;
+                                            align-items: center;
+                                            justify-content: center;
+                                            min-width: 36px;
+                                            height: 36px;
+                                        }
+
+                                        .action-btn:hover {
+                                            transform: translateY(-2px);
+                                            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+                                        }
+
+                                        .action-btn:active {
+                                            transform: translateY(0);
+                                        }
+
+                                        .btn-view {
+                                            background: #17a2b8;
+                                            color: #fff;
+                                        }
+
+                                        .btn-view:hover {
+                                            background: #138496;
+                                        }
+
+                                        .btn-edit {
+                                            background: #ffc107;
+                                            color: #1a1a1a;
+                                        }
+
+                                        .btn-edit:hover {
+                                            background: #e0a800;
+                                        }
+
+                                        .btn-success {
+                                            background: #28a745;
+                                            color: #fff;
+                                        }
+
+                                        .btn-success:hover {
+                                            background: #218838;
+                                        }
+
+                                        .btn-delete {
+                                            background: #dc3545;
+                                            color: #fff;
+                                        }
+
+                                        .btn-delete:hover {
+                                            background: #c82333;
+                                        }
+
+                                        .btn-timeout {
+                                            background: #28a745;
+                                            color: #fff;
+                                        }
+
+                                        .btn-timeout:hover {
+                                            background: #218838;
+                                        }
+
+                                        /* Make sure buttons don't break on small screens */
+                                        @media (max-width: 768px) {
+                                            .action-buttons {
+                                                gap: 5px;
+                                            }
+                                            
+                                            .action-btn {
+                                                padding: 6px 10px;
+                                                font-size: 12px;
+                                                min-width: 32px;
+                                                height: 32px;
+                                            }
+                                        }
+                                        </style>
+
+                                        <!-- REQUIRED SCRIPTS AT END OF BODY -->
+                                        <script src="<?php echo JS_URL; ?>/dashboard.js"></script>
+                                        <script src="<?php echo JS_URL; ?>/cashadvance.js"></script>
+
+                                        <!-- TEST BUTTONS (Add this temporarily to test if functions are working) -->
+                                        <script>
+                                        // Test if functions are loaded
+                                        console.log('Testing Cash Advance Functions:');
+                                        console.log('viewCashAdvance:', typeof window.viewCashAdvance);
+                                        console.log('approveAdvance:', typeof window.approveAdvance);
+                                        console.log('rejectAdvance:', typeof window.rejectAdvance);
+
+                                        // If any are undefined, there's a loading issue
+                                        if (typeof window.viewCashAdvance === 'undefined') {
+                                            console.error('ERROR: viewCashAdvance not loaded!');
+                                        }
+                                        if (typeof window.approveAdvance === 'undefined') {
+                                            console.error('ERROR: approveAdvance not loaded!');
+                                        }
+                                        if (typeof window.rejectAdvance === 'undefined') {
+                                            console.error('ERROR: rejectAdvance not loaded!');
+                                        }
+                                        </script>
                                     </tr>
                                     <?php endforeach; ?>
                                 <?php endif; ?>
