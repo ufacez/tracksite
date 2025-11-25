@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 25, 2025 at 01:03 PM
+-- Generation Time: Nov 25, 2025 at 01:14 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -176,7 +176,15 @@ INSERT INTO `activity_logs` (`log_id`, `user_id`, `action`, `table_name`, `recor
 (153, 1, 'reject_cashadvance', 'cash_advances', 9, 'Rejected cash advance for Ean Paolo Espiritu', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36 OPR/123.0.0.0', '2025-11-25 11:46:33'),
 (154, 1, 'login', 'users', 1, 'User logged in', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36', '2025-11-25 11:49:08'),
 (155, 1, 'edit_deduction', 'deductions', 8, 'Updated cashadvance deduction for Test Worker', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36', '2025-11-25 11:49:39'),
-(156, 1, 'edit_deduction', 'deductions', 8, 'Updated cashadvance deduction for Test Worker', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36', '2025-11-25 11:49:59');
+(156, 1, 'edit_deduction', 'deductions', 8, 'Updated cashadvance deduction for Test Worker', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36', '2025-11-25 11:49:59'),
+(157, 1, 'record_cashadvance_payment', 'cash_advance_repayments', 16, 'Recorded payment of ₱500.00 for Ean Paolo Espiritu', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36', '2025-11-25 12:10:01'),
+(158, 1, 'record_cashadvance_payment', 'cash_advance_repayments', 17, 'Recorded payment of ₱250.00 for Test Worker', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36', '2025-11-25 12:10:54'),
+(159, 1, 'record_cashadvance_payment', 'cash_advance_repayments', 18, 'Recorded payment of ₱250.00 for Test Worker', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36', '2025-11-25 12:11:27'),
+(160, 1, 'record_cashadvance_payment', 'cash_advance_repayments', 19, 'Recorded payment of ₱500.00 for Ean Paolo Espiritu', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36', '2025-11-25 12:12:37'),
+(161, 1, 'record_cashadvance_payment', 'cash_advance_repayments', 20, 'Recorded payment of ₱100.00 for Ean Paolo Espiritu', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36', '2025-11-25 12:13:08'),
+(162, 1, 'record_cashadvance_payment', 'cash_advance_repayments', 21, 'Recorded payment of ₱100.00 for Ean Paolo Espiritu', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36', '2025-11-25 12:13:15'),
+(163, 1, 'toggle_deduction', 'deductions', 6, 'Toggled deduction status', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36', '2025-11-25 12:13:30'),
+(164, 1, 'toggle_deduction', 'deductions', 1, 'Toggled deduction status', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36', '2025-11-25 12:13:32');
 
 -- --------------------------------------------------------
 
@@ -240,6 +248,7 @@ CREATE TABLE `cash_advances` (
   `approval_date` date DEFAULT NULL,
   `repayment_amount` decimal(10,2) DEFAULT 0.00,
   `balance` decimal(10,2) NOT NULL,
+  `completed_at` timestamp NULL DEFAULT NULL,
   `notes` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
@@ -253,16 +262,16 @@ CREATE TABLE `cash_advances` (
 -- Dumping data for table `cash_advances`
 --
 
-INSERT INTO `cash_advances` (`advance_id`, `worker_id`, `request_date`, `amount`, `installments`, `installment_amount`, `deduction_id`, `reason`, `status`, `approved_by`, `approval_date`, `repayment_amount`, `balance`, `notes`, `created_at`, `updated_at`, `is_archived`, `archived_at`, `archived_by`, `archive_reason`) VALUES
-(1, 4, '2025-11-20', 1000.00, 1, 0.00, NULL, 'need for tuiton fee', 'completed', 1, '2025-11-20', 1000.00, 0.00, '', '2025-11-19 23:19:13', '2025-11-22 23:45:56', 0, NULL, NULL, NULL),
-(2, 1, '2025-11-23', 500.00, 1, 0.00, NULL, 'Medical', 'approved', 1, '2025-11-23', 0.00, 500.00, '', '2025-11-23 00:07:46', '2025-11-23 00:08:29', 0, NULL, NULL, NULL),
-(3, 1, '2025-11-23', 500.00, 1, 0.00, NULL, 'Emergency', 'approved', 1, '2025-11-23', 0.00, 500.00, '', '2025-11-23 00:20:19', '2025-11-23 00:20:28', 0, NULL, NULL, NULL),
-(4, 4, '2025-11-24', 100.00, 1, 0.00, NULL, 'Emergency', 'rejected', 1, '2025-11-25', 0.00, 100.00, 'no', '2025-11-23 22:55:53', '2025-11-25 11:46:27', 0, NULL, NULL, NULL),
-(5, 1, '2025-11-24', 1000.00, 1, 0.00, NULL, 'Emergency', 'rejected', 1, '2025-11-24', 0.00, 1000.00, 'enough', '2025-11-23 23:14:38', '2025-11-24 10:29:16', 0, NULL, NULL, NULL),
-(6, 4, '2025-11-24', 500.00, 1, 500.00, 8, 'Education', 'approved', 1, '2025-11-25', 0.00, 500.00, '', '2025-11-23 23:31:04', '2025-11-25 11:33:16', 0, NULL, NULL, NULL),
-(7, 1, '2025-11-24', 100.00, 2, 50.00, 6, 'Emergency', 'approved', 1, '2025-11-24', 0.00, 100.00, '', '2025-11-23 23:47:47', '2025-11-24 10:29:42', 0, NULL, NULL, NULL),
-(8, 1, '2025-11-24', 100.00, 1, 100.00, NULL, 'Housing', 'approved', 1, '2025-11-24', 0.00, 100.00, '', '2025-11-23 23:55:12', '2025-11-24 10:30:08', 0, NULL, NULL, NULL),
-(9, 1, '2025-11-24', 10.00, 1, 0.00, NULL, 'Education', 'rejected', 1, '2025-11-25', 0.00, 10.00, 'no', '2025-11-24 10:30:03', '2025-11-25 11:46:33', 0, NULL, NULL, NULL);
+INSERT INTO `cash_advances` (`advance_id`, `worker_id`, `request_date`, `amount`, `installments`, `installment_amount`, `deduction_id`, `reason`, `status`, `approved_by`, `approval_date`, `repayment_amount`, `balance`, `completed_at`, `notes`, `created_at`, `updated_at`, `is_archived`, `archived_at`, `archived_by`, `archive_reason`) VALUES
+(1, 4, '2025-11-20', 1000.00, 1, 0.00, NULL, 'need for tuiton fee', 'completed', 1, '2025-11-20', 1000.00, 0.00, '2025-11-25 12:09:52', '', '2025-11-19 23:19:13', '2025-11-25 12:09:52', 0, NULL, NULL, NULL),
+(2, 1, '2025-11-23', 500.00, 1, 0.00, NULL, 'Medical', 'completed', 1, '2025-11-23', 500.00, 0.00, '2025-11-25 12:12:37', '', '2025-11-23 00:07:46', '2025-11-25 12:12:37', 0, NULL, NULL, NULL),
+(3, 1, '2025-11-23', 500.00, 1, 0.00, NULL, 'Emergency', 'completed', 1, '2025-11-23', 500.00, 0.00, '2025-11-25 12:10:01', '', '2025-11-23 00:20:19', '2025-11-25 12:10:01', 0, NULL, NULL, NULL),
+(4, 4, '2025-11-24', 100.00, 1, 0.00, NULL, 'Emergency', 'rejected', 1, '2025-11-25', 0.00, 100.00, NULL, 'no', '2025-11-23 22:55:53', '2025-11-25 11:46:27', 0, NULL, NULL, NULL),
+(5, 1, '2025-11-24', 1000.00, 1, 0.00, NULL, 'Emergency', 'rejected', 1, '2025-11-24', 0.00, 1000.00, NULL, 'enough', '2025-11-23 23:14:38', '2025-11-24 10:29:16', 0, NULL, NULL, NULL),
+(6, 4, '2025-11-24', 500.00, 1, 500.00, 8, 'Education', 'completed', 1, '2025-11-25', 500.00, 0.00, '2025-11-25 12:11:27', '', '2025-11-23 23:31:04', '2025-11-25 12:11:27', 0, NULL, NULL, NULL),
+(7, 1, '2025-11-24', 100.00, 2, 50.00, 6, 'Emergency', 'completed', 1, '2025-11-24', 100.00, 0.00, '2025-11-25 12:13:15', '', '2025-11-23 23:47:47', '2025-11-25 12:13:15', 0, NULL, NULL, NULL),
+(8, 1, '2025-11-24', 100.00, 1, 100.00, NULL, 'Housing', 'completed', 1, '2025-11-24', 100.00, 0.00, '2025-11-25 12:13:08', '', '2025-11-23 23:55:12', '2025-11-25 12:13:08', 0, NULL, NULL, NULL),
+(9, 1, '2025-11-24', 10.00, 1, 0.00, NULL, 'Education', 'rejected', 1, '2025-11-25', 0.00, 10.00, NULL, 'no', '2025-11-24 10:30:03', '2025-11-25 11:46:33', 0, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -280,6 +289,18 @@ CREATE TABLE `cash_advance_repayments` (
   `processed_by` int(11) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `cash_advance_repayments`
+--
+
+INSERT INTO `cash_advance_repayments` (`repayment_id`, `advance_id`, `amount`, `repayment_date`, `payment_method`, `notes`, `processed_by`, `created_at`) VALUES
+(16, 3, 500.00, '2025-11-25', 'payroll_deduction', '', 1, '2025-11-25 12:10:01'),
+(17, 6, 250.00, '2025-11-25', 'payroll_deduction', '', 1, '2025-11-25 12:10:54'),
+(18, 6, 250.00, '2025-11-25', 'payroll_deduction', '', 1, '2025-11-25 12:11:27'),
+(19, 2, 500.00, '2025-11-25', 'payroll_deduction', '', 1, '2025-11-25 12:12:36'),
+(20, 8, 100.00, '2025-11-25', 'payroll_deduction', '', 1, '2025-11-25 12:13:08'),
+(21, 7, 100.00, '2025-11-25', 'payroll_deduction', '', 1, '2025-11-25 12:13:14');
 
 -- --------------------------------------------------------
 
@@ -308,11 +329,11 @@ CREATE TABLE `deductions` (
 --
 
 INSERT INTO `deductions` (`deduction_id`, `worker_id`, `payroll_id`, `deduction_type`, `amount`, `description`, `frequency`, `status`, `is_active`, `applied_count`, `created_by`, `created_at`, `updated_at`) VALUES
-(1, 1, NULL, 'sss', 100.00, '', 'per_payroll', 'applied', 0, 0, 1, '2025-11-15 12:21:39', '2025-11-24 10:30:51'),
+(1, 1, NULL, 'sss', 100.00, '', 'per_payroll', 'applied', 1, 0, 1, '2025-11-15 12:21:39', '2025-11-25 12:13:32'),
 (2, 1, NULL, 'pagibig', 100.00, '', 'per_payroll', 'applied', 1, 0, 1, '2025-11-15 12:31:52', '2025-11-18 09:05:31'),
 (4, 1, NULL, 'cashadvance', 250.00, 'Cash Advance Repayment - ₱500.00 / 2 installments', 'per_payroll', 'applied', 1, 0, 1, '2025-11-23 00:20:28', '2025-11-24 10:41:03'),
-(6, 1, NULL, 'cashadvance', 50.00, 'Cash Advance Repayment - 2 installment(s) of ₱50.00', 'per_payroll', 'applied', 0, 0, 1, '2025-11-24 10:29:42', '2025-11-24 10:30:39'),
-(8, 4, NULL, 'cashadvance', 500.00, 'Cash Advance Repayment - 1 installment(s) of ₱500.00', 'one_time', 'applied', 1, 0, 1, '2025-11-25 11:33:16', '2025-11-25 11:49:59');
+(6, 1, NULL, 'cashadvance', 50.00, 'Cash Advance Repayment - 2 installment(s) of ₱50.00', 'per_payroll', 'applied', 1, 0, 1, '2025-11-24 10:29:42', '2025-11-25 12:13:30'),
+(8, 4, NULL, 'cashadvance', 500.00, 'Cash Advance Repayment - 1 installment(s) of ₱500.00', 'one_time', 'applied', 0, 0, 1, '2025-11-25 11:33:16', '2025-11-25 12:11:27');
 
 -- --------------------------------------------------------
 
@@ -720,7 +741,9 @@ ALTER TABLE `cash_advances`
   ADD KEY `idx_request_date` (`request_date`),
   ADD KEY `fk_cashadvance_archived_by` (`archived_by`),
   ADD KEY `idx_is_archived` (`is_archived`),
-  ADD KEY `idx_cash_advances_deduction` (`deduction_id`);
+  ADD KEY `idx_cash_advances_deduction` (`deduction_id`),
+  ADD KEY `idx_cash_advances_status` (`status`),
+  ADD KEY `idx_cash_advances_worker` (`worker_id`,`status`);
 
 --
 -- Indexes for table `cash_advance_repayments`
@@ -728,7 +751,8 @@ ALTER TABLE `cash_advances`
 ALTER TABLE `cash_advance_repayments`
   ADD PRIMARY KEY (`repayment_id`),
   ADD KEY `idx_advance_id` (`advance_id`),
-  ADD KEY `fk_repayment_processor` (`processed_by`);
+  ADD KEY `fk_repayment_processor` (`processed_by`),
+  ADD KEY `idx_repayments_date` (`repayment_date`);
 
 --
 -- Indexes for table `deductions`
@@ -820,7 +844,7 @@ ALTER TABLE `workers`
 -- AUTO_INCREMENT for table `activity_logs`
 --
 ALTER TABLE `activity_logs`
-  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=157;
+  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=165;
 
 --
 -- AUTO_INCREMENT for table `attendance`
@@ -838,7 +862,7 @@ ALTER TABLE `cash_advances`
 -- AUTO_INCREMENT for table `cash_advance_repayments`
 --
 ALTER TABLE `cash_advance_repayments`
-  MODIFY `repayment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `repayment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
 
 --
 -- AUTO_INCREMENT for table `deductions`
