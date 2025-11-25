@@ -241,14 +241,25 @@ try {
             $repayment_date = isset($_POST['repayment_date']) ? sanitizeString($_POST['repayment_date']) : date('Y-m-d');
             $notes = isset($_POST['notes']) ? sanitizeString($_POST['notes']) : '';
             
-            if ($advance_id <= 0 || $amount <= 0) {
+            error_log("Recording payment - Advance ID: $advance_id, Amount: $amount");
+            
+            if ($advance_id <= 0) {
                 http_response_code(400);
-                echo json_encode(['success' => false, 'message' => 'Invalid payment data']);
+                echo json_encode(['success' => false, 'message' => 'Invalid cash advance ID']);
+                exit;
+            }
+            
+            if ($amount <= 0) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Amount must be greater than zero']);
                 exit;
             }
             
             // Get cash advance
-            $stmt = $db->prepare("SELECT * FROM cash_advances WHERE advance_id = ?");
+            $stmt = $db->prepare("SELECT ca.*, w.first_name, w.last_name 
+                FROM cash_advances ca
+                JOIN workers w ON ca.worker_id = w.worker_id
+                WHERE ca.advance_id = ?");
             $stmt->execute([$advance_id]);
             $advance = $stmt->fetch();
             
@@ -267,7 +278,7 @@ try {
             $db->beginTransaction();
             
             try {
-                // Record repayment - FIXED: Use correct column names
+                // Record repayment
                 $stmt = $db->prepare("INSERT INTO cash_advance_repayments 
                     (advance_id, repayment_date, amount, payment_method, notes, processed_by, created_at)
                     VALUES (?, ?, ?, ?, ?, ?, NOW())");
@@ -277,49 +288,62 @@ try {
                     $amount,
                     $payment_method,
                     $notes,
-                    $user_id  // Use processed_by instead of created_by
+                    $user_id
                 ]);
                 
                 $repayment_id = $db->lastInsertId();
+                error_log("Repayment record created with ID: $repayment_id");
                 
                 // Update cash advance balance
                 $new_balance = $advance['balance'] - $amount;
                 $new_repayment_amount = $advance['repayment_amount'] + $amount;
-                $new_status = $new_balance <= 0 ? 'completed' : 'repaying';
+                $new_status = $new_balance <= 0.01 ? 'completed' : 'repaying'; // Use 0.01 to handle float precision
                 
                 $stmt = $db->prepare("UPDATE cash_advances SET 
                     balance = ?,
                     repayment_amount = ?,
                     status = ?,
-                    completed_at = CASE WHEN ? = 'completed' THEN NOW() ELSE completed_at END,
+                    completed_at = CASE WHEN ? <= 0.01 THEN NOW() ELSE completed_at END,
                     updated_at = NOW()
                     WHERE advance_id = ?");
                 $stmt->execute([
                     $new_balance,
                     $new_repayment_amount,
                     $new_status,
-                    $new_status,
+                    $new_balance,
                     $advance_id
                 ]);
+                
+                error_log("Cash advance updated - New balance: $new_balance, Status: $new_status");
+                
+                // If completed, deactivate the linked deduction
+                if ($new_status === 'completed' && !empty($advance['deduction_id'])) {
+                    $stmt = $db->prepare("UPDATE deductions SET is_active = 0 WHERE deduction_id = ?");
+                    $stmt->execute([$advance['deduction_id']]);
+                    error_log("Deduction deactivated - ID: " . $advance['deduction_id']);
+                }
                 
                 $db->commit();
                 
                 // Log activity
                 logActivity($db, $user_id, 'record_cashadvance_payment', 'cash_advance_repayments', 
-                    $repayment_id, "Recorded payment of ₱" . number_format($amount, 2));
+                    $repayment_id, "Recorded payment of ₱" . number_format($amount, 2) . " for {$advance['first_name']} {$advance['last_name']}");
                 
                 echo json_encode([
                     'success' => true, 
                     'message' => 'Payment recorded successfully!',
                     'data' => [
+                        'repayment_id' => $repayment_id,
                         'new_balance' => $new_balance,
-                        'status' => $new_status
+                        'status' => $new_status,
+                        'is_completed' => $new_status === 'completed'
                     ]
                 ]);
                 
             } catch (Exception $e) {
                 $db->rollBack();
                 error_log("Payment Error: " . $e->getMessage());
+                error_log("Stack trace: " . $e->getTraceAsString());
                 http_response_code(500);
                 echo json_encode(['success' => false, 'message' => 'Failed to record payment: ' . $e->getMessage()]);
             }
@@ -336,6 +360,7 @@ try {
         $db->rollBack();
     }
     error_log("Cash Advance API Error: " . $e->getMessage());
+    error_log("Stack trace: " . $e->getTraceAsString());
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'Database error occurred']);
 } catch (Exception $e) {
@@ -343,6 +368,7 @@ try {
         $db->rollBack();
     }
     error_log("Cash Advance API Error: " . $e->getMessage());
+    error_log("Stack trace: " . $e->getTraceAsString());
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'An error occurred']);
 }

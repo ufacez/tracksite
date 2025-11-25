@@ -1,6 +1,6 @@
 <?php
 /**
- * Record Cash Advance Repayment
+ * Record Cash Advance Repayment - FULLY FIXED
  * TrackSite Construction Management System
  */
 
@@ -42,6 +42,11 @@ try {
         setFlashMessage('This cash advance has already been fully repaid', 'info');
         redirect(BASE_URL . '/modules/super_admin/cashadvance/index.php');
     }
+    
+    if ($advance['status'] !== 'approved' && $advance['status'] !== 'repaying') {
+        setFlashMessage('Cash advance must be approved before recording payments', 'error');
+        redirect(BASE_URL . '/modules/super_admin/cashadvance/index.php');
+    }
 } catch (PDOException $e) {
     error_log("Query Error: " . $e->getMessage());
     setFlashMessage('Database error occurred', 'error');
@@ -78,61 +83,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['record_payment'])) {
         $errors[] = 'Payment amount cannot exceed remaining balance of ₱' . number_format($advance['balance'], 2);
     }
     
-    if (empty($payment_method)) {
-        $errors[] = 'Please select a payment method';
+    if (!validateDate($repayment_date)) {
+        $errors[] = 'Invalid repayment date';
     }
     
     if (empty($errors)) {
-        try {
-            $db->beginTransaction();
-            
-            // Record repayment
-            $stmt = $db->prepare("INSERT INTO cash_advance_repayments 
-                (advance_id, repayment_date, amount, payment_method, notes, processed_by, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, NOW())");
-            $stmt->execute([
-                $advance_id,
-                $repayment_date,
-                $amount,
-                $payment_method,
-                $notes,
-                getCurrentUserId()
-            ]);
-            
-            // Update cash advance balance
-            $new_balance = $advance['balance'] - $amount;
-            $new_repayment_amount = $advance['repayment_amount'] + $amount;
-            $new_status = $new_balance <= 0 ? 'completed' : 'repaying';
-            
-            $stmt = $db->prepare("UPDATE cash_advances SET 
-                balance = ?,
-                repayment_amount = ?,
-                status = ?,
-                completed_at = CASE WHEN ? = 'completed' THEN NOW() ELSE completed_at END,
-                updated_at = NOW()
-                WHERE advance_id = ?");
-            $stmt->execute([
-                $new_balance,
-                $new_repayment_amount,
-                $new_status,
-                $new_status,
-                $advance_id
-            ]);
-            
-            $db->commit();
-            
-            // Log activity
-            logActivity($db, getCurrentUserId(), 'record_cashadvance_payment', 'cash_advance_repayments', 
-                $db->lastInsertId(), "Recorded payment of ₱" . number_format($amount, 2) . " for {$advance['first_name']} {$advance['last_name']}");
-            
-            setFlashMessage('Payment recorded successfully!', 'success');
-            redirect(BASE_URL . '/modules/super_admin/cashadvance/index.php');
-            
-        } catch (PDOException $e) {
-            $db->rollBack();
-            error_log("Record Payment Error: " . $e->getMessage());
-            $errors[] = 'Failed to record payment. Please try again.';
-        }
+        // Use AJAX approach for better error handling
+        ?>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const formData = new FormData();
+                formData.append('action', 'record_payment');
+                formData.append('advance_id', <?php echo $advance_id; ?>);
+                formData.append('amount', <?php echo $amount; ?>);
+                formData.append('payment_method', '<?php echo $payment_method; ?>');
+                formData.append('repayment_date', '<?php echo $repayment_date; ?>');
+                formData.append('notes', '<?php echo addslashes($notes); ?>');
+                
+                fetch('<?php echo BASE_URL; ?>/api/cashadvance.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);
+                        window.location.href = '<?php echo BASE_URL; ?>/modules/super_admin/cashadvance/index.php';
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Failed to record payment. Please try again.');
+                });
+            });
+        </script>
+        <?php
     }
 }
 ?>
@@ -223,7 +210,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['record_payment'])) {
         }
         
         @media (max-width: 1024px) {
-            .cashadvance-content > div {
+            .cashadvance-content > form > div {
                 grid-template-columns: 1fr !important;
             }
             
@@ -268,12 +255,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['record_payment'])) {
                     </div>
                 </div>
                 
-                <div style="display: grid; grid-template-columns: 1fr 400px; gap: 20px;">
-                    
-                    <!-- Main Form -->
-                    <div>
-                        <form method="POST" action="">
-                            
+                <form id="repaymentForm">
+                    <div style="display: grid; grid-template-columns: 1fr 400px; gap: 20px;">
+                        
+                        <!-- Main Form -->
+                        <div>
                             <div class="form-card">
                                 <div class="form-section-title">
                                     <i class="fas fa-user"></i> Cash Advance Information
@@ -361,64 +347,78 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['record_payment'])) {
                                 <button type="button" class="btn btn-secondary btn-lg" onclick="window.history.back()">
                                     <i class="fas fa-times"></i> Cancel
                                 </button>
-                                <button type="submit" name="record_payment" class="btn btn-primary btn-lg">
+                                <button type="submit" class="btn btn-primary btn-lg">
                                     <i class="fas fa-check"></i> Record Payment
                                 </button>
                             </div>
-                    
-                    <!-- Sidebar Summary -->
-                    <div>
-                        
-                        <!-- Balance Card -->
-                        <div class="summary-card">
-                            <h3><i class="fas fa-calculator"></i> Balance Summary</h3>
-                            
-                            <div class="summary-row">
-                                <span>Original Amount:</span>
-                                <strong>₱<?php echo number_format($advance['amount'], 2); ?></strong>
-                            </div>
-                            
-                            <div class="summary-row">
-                                <span>Total Paid:</span>
-                                <span style="color: #28a745;">₱<?php echo number_format($advance['repayment_amount'], 2); ?></span>
-                            </div>
-                            
-                            <div class="summary-row total">
-                                <span>Remaining Balance:</span>
-                                <strong style="color: #dc3545;">₱<?php echo number_format($advance['balance'], 2); ?></strong>
-                            </div>
                         </div>
                         
-                        <!-- Repayment History -->
-                        <div class="form-card">
-                            <h3><i class="fas fa-history"></i> Repayment History</h3>
+                        <!-- Sidebar Summary -->
+                        <div>
                             
-                            <?php if (empty($repayments)): ?>
-                                <p style="text-align: center; color: #999; padding: 20px;">No payments yet</p>
-                            <?php else: ?>
-                                <div class="repayment-list">
-                                    <?php foreach ($repayments as $rep): ?>
-                                    <div class="repayment-item">
-                                        <div>
-                                            <div class="repayment-date">
-                                                <?php echo date('M d, Y', strtotime($rep['repayment_date'])); ?>
-                                            </div>
-                                            <div class="repayment-method">
-                                                <?php echo ucwords(str_replace('_', ' ', $rep['payment_method'])); ?>
-                                            </div>
-                                        </div>
-                                        <div class="repayment-amount">
-                                            ₱<?php echo number_format($rep['amount'], 2); ?>
-                                        </div>
-                                    </div>
-                                    <?php endforeach; ?>
+                            <!-- Balance Card -->
+                            <div class="summary-card">
+                                <h3><i class="fas fa-calculator"></i> Balance Summary</h3>
+                                
+                                <div class="summary-row">
+                                    <span>Original Amount:</span>
+                                    <strong>₱<?php echo number_format($advance['amount'], 2); ?></strong>
                                 </div>
-                            <?php endif; ?>
+                                
+                                <div class="summary-row">
+                                    <span>Total Paid:</span>
+                                    <span style="color: #28a745;">₱<?php echo number_format($advance['repayment_amount'], 2); ?></span>
+                                </div>
+                                
+                                <div class="summary-row total">
+                                    <span>Remaining Balance:</span>
+                                    <strong style="color: #dc3545;">₱<?php echo number_format($advance['balance'], 2); ?></strong>
+                                </div>
+                                
+                                <div style="margin-top: 15px; padding-top: 15px; border-top: 2px solid #f0f0f0;">
+                                    <label style="font-size: 12px; color: #666; font-weight: 600; margin-bottom: 8px; display: block;">QUICK FILL:</label>
+                                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
+                                        <button type="button" class="btn btn-sm btn-secondary" onclick="fillAmount(<?php echo $advance['balance'] / 2; ?>)">
+                                            Half (₱<?php echo number_format($advance['balance'] / 2, 2); ?>)
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-primary" onclick="fillAmount(<?php echo $advance['balance']; ?>)">
+                                            Full (₱<?php echo number_format($advance['balance'], 2); ?>)
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Repayment History -->
+                            <div class="form-card">
+                                <h3><i class="fas fa-history"></i> Repayment History</h3>
+                                
+                                <?php if (empty($repayments)): ?>
+                                    <p style="text-align: center; color: #999; padding: 20px;">No payments yet</p>
+                                <?php else: ?>
+                                    <div class="repayment-list">
+                                        <?php foreach ($repayments as $rep): ?>
+                                        <div class="repayment-item">
+                                            <div>
+                                                <div class="repayment-date">
+                                                    <?php echo date('M d, Y', strtotime($rep['repayment_date'])); ?>
+                                                </div>
+                                                <div class="repayment-method">
+                                                    <?php echo ucwords(str_replace('_', ' ', $rep['payment_method'])); ?>
+                                                </div>
+                                            </div>
+                                            <div class="repayment-amount">
+                                                ₱<?php echo number_format($rep['amount'], 2); ?>
+                                            </div>
+                                        </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                            
                         </div>
                         
                     </div>
-                    
-                </div>
+                </form>
                 
             </div>
         </div>
@@ -427,62 +427,97 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['record_payment'])) {
 <script src="<?php echo JS_URL; ?>/dashboard.js"></script>
 
 <script>
-        function closeAlert(id) {
-            const alert = document.getElementById(id);
-            if (alert) {
-                alert.style.animation = 'slideUp 0.3s ease-in';
-                setTimeout(() => alert.remove(), 300);
-            }
-        }
-        
-        setTimeout(() => {
-            const errorMessage = document.getElementById('errorMessage');
-            if (errorMessage) closeAlert('errorMessage');
-        }, 5000);
+const maxBalance = <?php echo $advance['balance']; ?>;
+const baseUrl = '<?php echo BASE_URL; ?>';
 
-    // Add this to repayment.php for better UX
-    document.addEventListener('DOMContentLoaded', function() {
-        const amountInput = document.getElementById('amount');
-        const maxBalance = <?php echo $advance['balance']; ?>;
-        
-        if (amountInput) {
-            amountInput.addEventListener('input', function() {
-                const value = parseFloat(this.value) || 0;
-                
-                if (value > maxBalance) {
-                    this.setCustomValidity('Amount exceeds remaining balance of ₱' + maxBalance.toFixed(2));
-                } else if (value <= 0) {
-                    this.setCustomValidity('Amount must be greater than zero');
-                } else {
-                    this.setCustomValidity('');
-                }
-            });
-            
-            // Quick fill buttons
-            const balanceCard = document.querySelector('.summary-card');
-            if (balanceCard) {
-                const quickFillDiv = document.createElement('div');
-                quickFillDiv.style.cssText = 'margin-top: 15px; padding-top: 15px; border-top: 2px solid #f0f0f0;';
-                quickFillDiv.innerHTML = `
-                    <label style="font-size: 12px; color: #666; font-weight: 600; margin-bottom: 8px; display: block;">QUICK FILL:</label>
-                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
-                        <button type="button" class="btn btn-sm btn-secondary" onclick="fillAmount(${maxBalance / 2})">
-                            Half (₱${(maxBalance / 2).toFixed(2)})
-                        </button>
-                        <button type="button" class="btn btn-sm btn-primary" onclick="fillAmount(${maxBalance})">
-                            Full (₱${maxBalance.toFixed(2)})
-                        </button>
-                    </div>
-                `;
-                balanceCard.appendChild(quickFillDiv);
-            }
-        }
-    });
-
-    function fillAmount(amount) {
-        document.getElementById('amount').value = amount.toFixed(2);
-        document.getElementById('amount').dispatchEvent(new Event('input'));
+function closeAlert(id) {
+    const alert = document.getElementById(id);
+    if (alert) {
+        alert.style.animation = 'slideUp 0.3s ease-in';
+        setTimeout(() => alert.remove(), 300);
     }
+}
+
+function fillAmount(amount) {
+    document.getElementById('amount').value = amount.toFixed(2);
+    document.getElementById('amount').dispatchEvent(new Event('input'));
+}
+
+// Form validation
+document.getElementById('amount').addEventListener('input', function() {
+    const value = parseFloat(this.value) || 0;
+    
+    if (value > maxBalance) {
+        this.setCustomValidity('Amount exceeds remaining balance of ₱' + maxBalance.toFixed(2));
+    } else if (value <= 0) {
+        this.setCustomValidity('Amount must be greater than zero');
+    } else {
+        this.setCustomValidity('');
+    }
+});
+
+// Form submission
+document.getElementById('repaymentForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+    
+    const formData = new FormData();
+    formData.append('action', 'record_payment');
+    formData.append('advance_id', <?php echo $advance_id; ?>);
+    formData.append('amount', document.getElementById('amount').value);
+    formData.append('payment_method', document.getElementById('payment_method').value);
+    formData.append('repayment_date', document.getElementById('repayment_date').value);
+    formData.append('notes', document.getElementById('notes').value);
+    
+    console.log('Submitting payment:', {
+        advance_id: <?php echo $advance_id; ?>,
+        amount: document.getElementById('amount').value,
+        payment_method: document.getElementById('payment_method').value,
+        repayment_date: document.getElementById('repayment_date').value
+    });
+    
+    fetch(baseUrl + '/api/cashadvance.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        console.log('Response status:', response.status);
+        return response.text().then(text => {
+            console.log('Raw response:', text);
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                throw new Error('Invalid JSON response: ' + text);
+            }
+        });
+    })
+    .then(data => {
+        console.log('Response data:', data);
+        if (data.success) {
+            alert('✓ ' + data.message);
+            window.location.href = baseUrl + '/modules/super_admin/cashadvance/index.php';
+        } else {
+            alert('✗ Error: ' + data.message);
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('✗ Failed to record payment: ' + error.message);
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    });
+});
+
+setTimeout(() => {
+    const errorMessage = document.getElementById('errorMessage');
+    if (errorMessage) closeAlert('errorMessage');
+}, 5000);
 </script>
 
 </body>
