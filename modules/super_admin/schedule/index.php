@@ -26,7 +26,19 @@ $day_filter = isset($_GET['day']) ? sanitizeString($_GET['day']) : '';
 $status_filter = isset($_GET['status']) ? sanitizeString($_GET['status']) : 'active';
 
 // Build query for schedules
-$sql = "SELECT s.*, w.worker_code, w.first_name, w.last_name, w.position,
+$sql = "SELECT DISTINCT
+        s.schedule_id,
+        s.worker_id,
+        s.day_of_week,
+        s.start_time,
+        s.end_time,
+        s.is_active,
+        s.created_at,
+        s.updated_at,
+        w.worker_code,
+        w.first_name,
+        w.last_name,
+        w.position,
         u.username as created_by_name
         FROM schedules s
         JOIN workers w ON s.worker_id = w.worker_id

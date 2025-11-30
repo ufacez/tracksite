@@ -36,112 +36,85 @@ if ($day_of_month <= 15) {
 }
 
 // Build query - FIXED: Use subquery to ensure one payroll record per worker
-$sql = "SELECT DISTINCT
+$sql_workers = "SELECT DISTINCT
     w.worker_id,
     w.worker_code,
     w.first_name,
     w.last_name,
     w.position,
-    w.daily_rate,
-    (SELECT p2.days_worked FROM payroll p2 
-     WHERE p2.worker_id = w.worker_id 
-     AND p2.pay_period_start = ? 
-     AND p2.pay_period_end = ?
-     AND p2.is_archived = FALSE 
-     LIMIT 1) as days_worked,
-    (SELECT p2.total_hours FROM payroll p2 
-     WHERE p2.worker_id = w.worker_id 
-     AND p2.pay_period_start = ? 
-     AND p2.pay_period_end = ?
-     AND p2.is_archived = FALSE 
-     LIMIT 1) as total_hours,
-    (SELECT p2.overtime_hours FROM payroll p2 
-     WHERE p2.worker_id = w.worker_id 
-     AND p2.pay_period_start = ? 
-     AND p2.pay_period_end = ?
-     AND p2.is_archived = FALSE 
-     LIMIT 1) as overtime_hours,
-    (SELECT p2.gross_pay FROM payroll p2 
-     WHERE p2.worker_id = w.worker_id 
-     AND p2.pay_period_start = ? 
-     AND p2.pay_period_end = ?
-     AND p2.is_archived = FALSE 
-     LIMIT 1) as gross_pay,
-    (SELECT p2.total_deductions FROM payroll p2 
-     WHERE p2.worker_id = w.worker_id 
-     AND p2.pay_period_start = ? 
-     AND p2.pay_period_end = ?
-     AND p2.is_archived = FALSE 
-     LIMIT 1) as total_deductions,
-    (SELECT p2.payment_status FROM payroll p2 
-     WHERE p2.worker_id = w.worker_id 
-     AND p2.pay_period_start = ? 
-     AND p2.pay_period_end = ?
-     AND p2.is_archived = FALSE 
-     LIMIT 1) as payment_status,
-    (SELECT p2.payroll_id FROM payroll p2 
-     WHERE p2.worker_id = w.worker_id 
-     AND p2.pay_period_start = ? 
-     AND p2.pay_period_end = ?
-     AND p2.is_archived = FALSE 
-     LIMIT 1) as payroll_id
+    w.daily_rate
 FROM workers w
 WHERE w.employment_status = 'active' 
 AND w.is_archived = FALSE";
 
-$params = [
-    $period_start, $period_end,  // days_worked
-    $period_start, $period_end,  // total_hours
-    $period_start, $period_end,  // overtime_hours
-    $period_start, $period_end,  // gross_pay
-    $period_start, $period_end,  // total_deductions
-    $period_start, $period_end,  // payment_status
-    $period_start, $period_end   // payroll_id
-];
+$params = [];
 
 if (!empty($position_filter)) {
-    $sql .= " AND w.position = ?";
+    $sql_workers .= " AND w.position = ?";
     $params[] = $position_filter;
 }
 
 if (!empty($search_query)) {
-    $sql .= " AND (w.first_name LIKE ? OR w.last_name LIKE ? OR w.worker_code LIKE ?)";
+    $sql_workers .= " AND (w.first_name LIKE ? OR w.last_name LIKE ? OR w.worker_code LIKE ?)";
     $search_param = '%' . $search_query . '%';
     $params[] = $search_param;
     $params[] = $search_param;
     $params[] = $search_param;
 }
 
-if (!empty($status_filter)) {
-    if ($status_filter === 'paid') {
-        $sql .= " AND p.payment_status = 'paid'";
-    } elseif ($status_filter === 'unpaid') {
-        $sql .= " AND (p.payment_status IS NULL OR p.payment_status = 'unpaid')";
-    } elseif ($status_filter === 'pending') {
-        $sql .= " AND p.payment_status = 'pending'";
-    }
-}
-
-$sql .= " ORDER BY w.first_name, w.last_name";
+$sql_workers .= " ORDER BY w.first_name, w.last_name";
 
 try {
-    $stmt = $db->prepare($sql);
+    // Get workers
+    $stmt = $db->prepare($sql_workers);
     $stmt->execute($params);
-    $payroll_records = $stmt->fetchAll();
+    $workers = $stmt->fetchAll();
     
-    // For records without payroll, calculate from attendance
-    foreach ($payroll_records as &$record) {
-        // Convert NULL to 0 for numeric fields
-        $record['days_worked'] = $record['days_worked'] ?? 0;
-        $record['total_hours'] = $record['total_hours'] ?? 0;
-        $record['overtime_hours'] = $record['overtime_hours'] ?? 0;
-        $record['gross_pay'] = $record['gross_pay'] ?? 0;
-        $record['total_deductions'] = $record['total_deductions'] ?? 0;
-        $record['payment_status'] = $record['payment_status'] ?? 'unpaid';
+    $payroll_records = [];
+    
+    // STEP 2: For each worker, get their payroll data
+    foreach ($workers as $worker) {
+        $worker_id = $worker['worker_id'];
         
-        // If no payroll record exists, calculate from attendance
-        if (!$record['payroll_id']) {
-            // Get attendance data
+        // Check if payroll exists
+        $stmt = $db->prepare("SELECT 
+            payroll_id,
+            days_worked,
+            total_hours,
+            overtime_hours,
+            gross_pay,
+            total_deductions,
+            payment_status
+        FROM payroll 
+        WHERE worker_id = ? 
+        AND pay_period_start = ? 
+        AND pay_period_end = ?
+        AND is_archived = FALSE
+        LIMIT 1");
+        $stmt->execute([$worker_id, $period_start, $period_end]);
+        $payroll = $stmt->fetch();
+        
+        // Build the record
+        $record = [
+            'worker_id' => $worker['worker_id'],
+            'worker_code' => $worker['worker_code'],
+            'first_name' => $worker['first_name'],
+            'last_name' => $worker['last_name'],
+            'position' => $worker['position'],
+            'daily_rate' => $worker['daily_rate']
+        ];
+        
+        if ($payroll) {
+            // Has existing payroll
+            $record['payroll_id'] = $payroll['payroll_id'];
+            $record['days_worked'] = $payroll['days_worked'];
+            $record['total_hours'] = $payroll['total_hours'];
+            $record['overtime_hours'] = $payroll['overtime_hours'];
+            $record['gross_pay'] = $payroll['gross_pay'];
+            $record['total_deductions'] = $payroll['total_deductions'];
+            $record['payment_status'] = $payroll['payment_status'];
+        } else {
+            // Calculate from attendance
             $stmt = $db->prepare("SELECT 
                 COUNT(DISTINCT CASE 
                     WHEN status IN ('present', 'late', 'overtime') 
@@ -153,19 +126,20 @@ try {
                 WHERE worker_id = ? 
                 AND attendance_date BETWEEN ? AND ?
                 AND is_archived = FALSE");
-            $stmt->execute([$record['worker_id'], $period_start, $period_end]);
+            $stmt->execute([$worker_id, $period_start, $period_end]);
             $attendance = $stmt->fetch();
             
+            $record['payroll_id'] = null;
             $record['days_worked'] = $attendance['days_worked'] ?? 0;
             $record['total_hours'] = $attendance['total_hours'] ?? 0;
             $record['overtime_hours'] = $attendance['overtime_hours'] ?? 0;
             
             // Calculate gross pay
-            $schedule = getWorkerScheduleHours($db, $record['worker_id']);
-            $hourly_rate = $record['daily_rate'] / $schedule['hours_per_day'];
+            $schedule = getWorkerScheduleHours($db, $worker_id);
+            $hourly_rate = $worker['daily_rate'] / $schedule['hours_per_day'];
             $record['gross_pay'] = $hourly_rate * $record['total_hours'];
             
-            // Get active deductions
+            // Get deductions
             $stmt = $db->prepare("SELECT COALESCE(SUM(amount), 0) as total_deductions 
                 FROM deductions 
                 WHERE worker_id = ? 
@@ -175,12 +149,14 @@ try {
                     frequency = 'per_payroll'
                     OR (frequency = 'one_time' AND applied_count = 0)
                 )");
-            $stmt->execute([$record['worker_id']]);
+            $stmt->execute([$worker_id]);
             $deductions = $stmt->fetch();
             $record['total_deductions'] = $deductions['total_deductions'] ?? 0;
+            
+            $record['payment_status'] = 'unpaid';
         }
         
-        // Calculate deduction count for display
+        // Get deduction count
         $stmt = $db->prepare("SELECT COUNT(*) as count
             FROM deductions 
             WHERE worker_id = ? 
@@ -190,16 +166,28 @@ try {
                 frequency = 'per_payroll'
                 OR (frequency = 'one_time' AND applied_count = 0)
             )");
-        $stmt->execute([$record['worker_id']]);
+        $stmt->execute([$worker_id]);
         $deduction_count = $stmt->fetch();
         $record['deduction_count'] = $deduction_count['count'] ?? 0;
+        
+        // Apply status filter
+        if (!empty($status_filter)) {
+            if ($status_filter === 'paid' && $record['payment_status'] !== 'paid') {
+                continue;
+            } elseif ($status_filter === 'unpaid' && !in_array($record['payment_status'], ['unpaid', 'pending', null])) {
+                continue;
+            } elseif ($status_filter === 'pending' && $record['payment_status'] !== 'pending') {
+                continue;
+            }
+        }
+        
+        $payroll_records[] = $record;
     }
     
 } catch (PDOException $e) {
     error_log("Payroll Query Error: " . $e->getMessage());
     $payroll_records = [];
 }
-
 // Calculate totals
 $total_gross_pay = 0;
 $total_deductions = 0;

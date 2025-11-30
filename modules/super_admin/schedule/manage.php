@@ -1,6 +1,6 @@
 <?php
 /**
- * Manage Schedules Page - Grid View
+ * Manage Schedules Page - Grid View - FIXED
  * TrackSite Construction Management System
  */
 
@@ -17,49 +17,55 @@ requireSuperAdmin();
 $full_name = $_SESSION['full_name'] ?? 'Administrator';
 $flash = getFlashMessage();
 
-// Get all workers with their schedules
+// Get all workers with their schedules - COMPLETELY FIXED
 try {
-    $sql = "SELECT 
+    // STEP 1: Get DISTINCT workers only (no duplicates)
+    $sql = "SELECT DISTINCT
             w.worker_id,
             w.worker_code,
             w.first_name,
             w.last_name,
-            w.position,
-            GROUP_CONCAT(
-                CONCAT(s.day_of_week, ':', s.start_time, '-', s.end_time, ':', s.is_active)
-                ORDER BY FIELD(s.day_of_week, 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday')
-                SEPARATOR '|'
-            ) as schedule_data
+            w.position
             FROM workers w
-            LEFT JOIN schedules s ON w.worker_id = s.worker_id
-            WHERE w.employment_status = 'active' AND w.is_archived = FALSE
-            GROUP BY w.worker_id
+            WHERE w.employment_status = 'active' 
+            AND w.is_archived = FALSE
             ORDER BY w.first_name, w.last_name";
     
     $stmt = $db->query($sql);
     $workers = $stmt->fetchAll();
+    
+    // STEP 2: For EACH worker, get their schedules separately
+    foreach ($workers as &$worker) {
+        $worker['schedules'] = [];
+        
+        // Get schedules for this specific worker
+        $stmt = $db->prepare("SELECT 
+            day_of_week,
+            start_time,
+            end_time,
+            is_active
+            FROM schedules 
+            WHERE worker_id = ?
+            ORDER BY FIELD(day_of_week, 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday')");
+        $stmt->execute([$worker['worker_id']]);
+        $schedules = $stmt->fetchAll();
+        
+        // Parse schedules into easy-to-use array
+        foreach ($schedules as $schedule) {
+            $worker['schedules'][$schedule['day_of_week']] = [
+                'time' => $schedule['start_time'] . '-' . $schedule['end_time'],
+                'is_active' => (bool)$schedule['is_active']
+            ];
+        }
+    }
+    unset($worker); // Break reference
     
 } catch (PDOException $e) {
     error_log("Schedule Query Error: " . $e->getMessage());
     $workers = [];
 }
 
-// Parse schedule data for each worker
-foreach ($workers as &$worker) {
-    $worker['schedules'] = [];
-    if (!empty($worker['schedule_data'])) {
-        $schedules_raw = explode('|', $worker['schedule_data']);
-        foreach ($schedules_raw as $schedule_raw) {
-            $parts = explode(':', $schedule_raw);
-            if (count($parts) >= 3) {
-                $worker['schedules'][$parts[0]] = [
-                    'time' => $parts[1],
-                    'is_active' => $parts[2] == '1'
-                ];
-            }
-        }
-    }
-}
+// NO ADDITIONAL PARSING NEEDED - schedules are already in the right format
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -118,6 +124,21 @@ foreach ($workers as &$worker) {
                     </div>
                 </div>
                 
+                <!-- Debug Info (Remove after testing) -->
+                <div style="background: #fff3cd; padding: 10px; border-radius: 5px; margin-bottom: 20px; font-size: 12px;">
+                    <strong>Debug:</strong> Total workers loaded: <?php echo count($workers); ?>
+                    <?php
+                    // Check for duplicates
+                    $worker_ids = array_column($workers, 'worker_id');
+                    $unique_ids = array_unique($worker_ids);
+                    if (count($worker_ids) !== count($unique_ids)) {
+                        echo ' <span style="color: red;">⚠️ DUPLICATES DETECTED!</span>';
+                    } else {
+                        echo ' <span style="color: green;">✓ No duplicates</span>';
+                    }
+                    ?>
+                </div>
+                
                 <!-- Schedule Grid -->
                 <div class="schedule-grid">
                     <?php if (empty($workers)): ?>
@@ -128,7 +149,7 @@ foreach ($workers as &$worker) {
                         </div>
                     <?php else: ?>
                         <?php foreach ($workers as $worker): ?>
-                        <div class="schedule-card">
+                        <div class="schedule-card" data-worker-id="<?php echo $worker['worker_id']; ?>">
                             <div class="schedule-card-header">
                                 <div class="schedule-card-avatar">
                                     <?php echo getInitials($worker['first_name'] . ' ' . $worker['last_name']); ?>
@@ -233,6 +254,27 @@ foreach ($workers as &$worker) {
             const flashMessage = document.getElementById('flashMessage');
             if (flashMessage) closeAlert('flashMessage');
         }, 5000);
+        
+        // Debug: Check for duplicate cards in the DOM
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.schedule-card');
+            const workerIds = [];
+            const duplicates = [];
+            
+            cards.forEach(card => {
+                const workerId = card.dataset.workerId;
+                if (workerIds.includes(workerId)) {
+                    duplicates.push(workerId);
+                }
+                workerIds.push(workerId);
+            });
+            
+            if (duplicates.length > 0) {
+                console.error('DUPLICATE WORKER CARDS FOUND:', duplicates);
+            } else {
+                console.log('✓ No duplicate worker cards found. Total:', cards.length);
+            }
+        });
     </script>
     
     <style>
