@@ -97,6 +97,7 @@ function validatePassword($password) {
     return $result;
 }
 
+
 /**
  * Validate date format (Y-m-d)
  * 
@@ -509,4 +510,31 @@ function logActivity($db, $user_id, $action, $table_name = null, $record_id = nu
     $stmt = executeQuery($db, $sql, $params);
     return $stmt !== false;
 }
+
+function getWorkerScheduleHours($db, $worker_id) {
+    try {
+        $stmt = $db->prepare("SELECT 
+            SUM(TIMESTAMPDIFF(MINUTE, start_time, end_time) / 60) as weekly_hours,
+            COUNT(*) as days_scheduled
+            FROM schedules 
+            WHERE worker_id = ? AND is_active = TRUE");
+        $stmt->execute([$worker_id]);
+        $result = $stmt->fetch();
+        
+        $weekly_hours = $result['weekly_hours'] ?? 40;
+        $days_scheduled = $result['days_scheduled'] ?? 5;
+        $hours_per_day = ($days_scheduled > 0) ? ($weekly_hours / $days_scheduled) : 8;
+        
+        return [
+            'hours_per_day' => $hours_per_day,
+            'weekly_hours' => $weekly_hours,
+            'days_scheduled' => $days_scheduled
+        ];
+    } catch (PDOException $e) {
+        error_log("Schedule Hours Calculation Error: " . $e->getMessage());
+        return ['hours_per_day' => 8, 'weekly_hours' => 40, 'days_scheduled' => 5];
+    }
+}
+
 ?>
+

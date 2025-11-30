@@ -50,11 +50,6 @@ try {
             THEN a.overtime_hours 
             ELSE 0 
         END), 0) as overtime_hours,
-        (w.daily_rate * COALESCE(COUNT(DISTINCT CASE 
-            WHEN a.status IN ('present', 'late', 'overtime') 
-            AND a.is_archived = FALSE 
-            THEN a.attendance_date 
-        END), 0)) as gross_pay,
         COALESCE((
             SELECT SUM(d.amount) 
             FROM deductions d
@@ -88,6 +83,13 @@ try {
         $period_start, $period_end   // payroll join
     ]);
     $payroll_data = $stmt->fetchAll();
+
+    foreach ($payroll_data as &$row) {
+        $schedule = getWorkerScheduleHours($db, $row['worker_id']);
+        $hourly_rate = $row['daily_rate'] / $schedule['hours_per_day'];
+        $row['gross_pay'] = $hourly_rate * $row['total_hours'];
+        $row['hourly_rate'] = $hourly_rate;
+    }
     
 } catch (PDOException $e) {
     error_log("Export Query Error: " . $e->getMessage());

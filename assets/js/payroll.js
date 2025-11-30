@@ -85,7 +85,7 @@ function viewPayroll(workerId, periodStart, periodEnd) {
                             <h3><i class="fas fa-money-bill-wave"></i> Earnings</h3>
                             <div class="earnings-breakdown">
                                 <div class="breakdown-item">
-                                    <span>Basic Pay (${payroll.days_worked} days × ₱${parseFloat(payroll.daily_rate).toFixed(2)})</span>
+                                    <span>Basic Pay (${payroll.days_worked} day/s × ₱${parseFloat(payroll.daily_rate).toFixed(2)})</span>
                                     <strong>₱${parseFloat(payroll.gross_pay).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong>
                                 </div>
                                 <div class="breakdown-total">

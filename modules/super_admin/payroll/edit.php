@@ -37,6 +37,10 @@ try {
         setFlashMessage('Worker not found', 'error');
         redirect(BASE_URL . '/modules/super_admin/payroll/index.php');
     }
+
+    $schedule = getWorkerScheduleHours($db, $worker_id);
+    $worker_hourly_rate = $worker['daily_rate'] / $schedule['hours_per_day'];
+
 } catch (PDOException $e) {
     error_log("Query Error: " . $e->getMessage());
     setFlashMessage('Database error occurred', 'error');
@@ -151,8 +155,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_payroll'])) {
 $default_days = $attendance_data['days_worked'] ?? 0;
 $default_hours = $attendance_data['total_hours'] ?? 0;
 $default_overtime = $attendance_data['overtime_hours'] ?? 0;
-$default_gross = $worker['daily_rate'] * $default_days;
+$default_gross = $worker_hourly_rate * $default_hours;
 $default_net = $default_gross - $total_deductions;
+$default_net = $default_gross - $total_deductions;
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -219,6 +225,12 @@ $default_net = $default_gross - $total_deductions;
                                     <div class="form-group">
                                         <label>Daily Rate</label>
                                         <input type="text" value="₱<?php echo number_format($worker['daily_rate'], 2); ?>" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Hourly Rate</label>
+                                        <input type="text" value="₱<?php echo number_format($worker_hourly_rate, 2); ?>/hour" readonly>
+                                        <small>Based on: ₱<?php echo number_format($worker['daily_rate'], 2); ?> ÷ <?php echo number_format($schedule['hours_per_day'], 1); ?> hours/day
+                                            (<?php echo $schedule['days_scheduled']; ?> days scheduled)</small>
                                     </div>
                                     <div class="form-group">
                                         <label>Pay Period</label>
@@ -382,16 +394,22 @@ $default_net = $default_gross - $total_deductions;
     
     <script src="<?php echo JS_URL; ?>/dashboard.js"></script>
     <script>
-        const dailyRate = <?php echo $worker['daily_rate']; ?>;
-        const autoDeductions = <?php echo $total_deductions; ?>;
+
+         const dailyRate = <?php echo $worker['daily_rate']; ?>;
+         const hourlyRate = <?php echo $worker_hourly_rate; ?>;
+         const scheduledHoursPerDay = <?php echo $schedule['hours_per_day']; ?>;
+         const autoDeductions = <?php echo $total_deductions; ?>;
+         const autoDeductions = <?php echo $total_deductions; ?>;
         
         function calculateGrossPay() {
-            const days = parseFloat(document.getElementById('days_worked').value) || 0;
-            const gross = days * dailyRate;
+            const hours = parseFloat(document.getElementById('total_hours').value) || 0;
+            const gross = hours * hourlyRate;
             document.getElementById('gross_pay').value = gross.toFixed(2);
             document.getElementById('summary_gross').textContent = '₱' + gross.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
             calculateNetPay();
         }
+        
+        document.getElementById('total_hours').addEventListener('input', calculateGrossPay);
         
         function calculateNetPay() {
             const gross = parseFloat(document.getElementById('gross_pay').value) || 0;

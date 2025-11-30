@@ -67,8 +67,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate_payroll'])) 
             $total_hours = $attendance['total_hours'] ?? 0;
             $overtime_hours = $attendance['overtime_hours'] ?? 0;
             
-            // Calculate gross pay
-            $gross_pay = $worker['daily_rate'] * $days_worked;
+             $schedule = getWorkerScheduleHours($db, $worker['worker_id']);
+             $hourly_rate = $worker['daily_rate'] / $schedule['hours_per_day'];
+             $gross_pay = $hourly_rate * $total_hours;
             
             // Calculate deductions - FIXED: Use frequency-based logic
             $stmt = $db->prepare("SELECT COALESCE(SUM(amount), 0) as total_deductions 
@@ -208,7 +209,10 @@ try {
         $deductions = $stmt->fetch();
         
         $days_worked = $attendance['days_worked'] ?? 0;
-        $gross_pay = $worker['daily_rate'] * $days_worked;
+        $total_hours = $attendance['total_hours'] ?? 0;
+        $schedule = getWorkerScheduleHours($db, $worker['worker_id']);
+        $hourly_rate = $worker['daily_rate'] / $schedule['hours_per_day'];
+        $gross_pay = $hourly_rate * $total_hours;
         $deduction_amount = $deductions['total_deductions'] ?? 0;
         $net_pay = $gross_pay - $deduction_amount;
         

@@ -140,6 +140,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     http_response_code(404);
                     jsonError('Worker not found');
                 }
+
+                  $schedule = getWorkerScheduleHours($db, $worker_id);
+                  $hourly_rate = $worker['daily_rate'] / $schedule['hours_per_day'];
                 
                 // Calculate attendance data
                 $stmt = $db->prepare("SELECT 
@@ -160,7 +163,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $days_worked = $attendance['days_worked'] ?? 0;
                 $total_hours = $attendance['total_hours'] ?? 0;
                 $overtime_hours = $attendance['overtime_hours'] ?? 0;
-                $gross_pay = $worker['daily_rate'] * $days_worked;
+                $gross_pay = $hourly_rate * $total_hours;
                 
                 // Get deductions - FIXED: Get active deductions
                 $stmt = $db->prepare("SELECT * FROM deductions 

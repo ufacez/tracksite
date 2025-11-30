@@ -60,7 +60,7 @@ $sql = "SELECT
         AND a.status IN ('present', 'late', 'overtime') 
         AND a.is_archived = FALSE 
         THEN a.attendance_date 
-    END), 0)) as gross_pay,
+    END), 0)) as overtime_hours,
     COALESCE((
         SELECT SUM(d.amount) 
         FROM deductions d
@@ -132,6 +132,14 @@ try {
     $stmt = $db->prepare($sql);
     $stmt->execute($params);
     $payroll_records = $stmt->fetchAll();
+
+    foreach ($payroll_records as &$record) {
+        $schedule = getWorkerScheduleHours($db, $record['worker_id']);
+        $hourly_rate = $record['daily_rate'] / $schedule['hours_per_day'];
+        $record['gross_pay'] = $hourly_rate * $record['total_hours'];
+        $record['hourly_rate'] = $hourly_rate;
+        $record['scheduled_hours_per_day'] = $schedule['hours_per_day'];
+    }
 } catch (PDOException $e) {
     error_log("Payroll Query Error: " . $e->getMessage());
     $payroll_records = [];
@@ -380,7 +388,7 @@ try {
                                         </td>
                                         <td><?php echo htmlspecialchars($record['position']); ?></td>
                                         <td>
-                                            <strong><?php echo $record['days_worked']; ?> days</strong>
+                                            <strong><?php echo $record['days_worked']; ?> day/s</strong>
                                             <small style="display: block; color: #666;">₱<?php echo number_format($record['daily_rate'], 2); ?>/day</small>
                                         </td>
                                         <td><strong>₱<?php echo number_format($record['gross_pay'], 2); ?></strong></td>
