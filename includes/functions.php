@@ -537,4 +537,3 @@ function getWorkerScheduleHours($db, $worker_id) {
 }
 
 ?>
-

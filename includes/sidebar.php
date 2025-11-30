@@ -93,7 +93,13 @@ $current_dir = basename(dirname($_SERVER['PHP_SELF']));
                 <div class="title">Archive</div>
             </a>
         </li>
-        
+        <li>
+             <a href="<?php echo BASE_URL; ?>/modules/super_admin/audit/index.php"
+                class="<?php echo ($current_dir === 'audit') ? 'active' : ''; ?>">
+                 <i class="fas fa-clipboard-list"></i>
+                <div class="title">Audit Trail</div>
+            </a>
+        </li>
         <!-- Settings -->
         <li>
             <a href="<?php echo BASE_URL; ?>/modules/super_admin/settings/index.php"
