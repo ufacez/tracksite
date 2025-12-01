@@ -1,9 +1,13 @@
 /**
- * Worker Module Styles
+ * Worker Module Styles - UNIFIED VERSION
  * TrackSite Construction Management System
+ * Consistent with main dashboard styles
  */
 
-/* Welcome Banner */
+/* ============================================
+   WELCOME BANNER - CONSISTENT DESIGN
+   ============================================ */
+
 .welcome-banner {
     background: linear-gradient(135deg, #DAA520, #B8860B);
     border-radius: 15px;
@@ -90,14 +94,20 @@
     opacity: 0.8;
 }
 
-/* Worker Grid Layout */
+/* ============================================
+   WORKER GRID LAYOUT - CONSISTENT
+   ============================================ */
+
 .worker-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
     gap: 25px;
 }
 
-/* Worker Card */
+/* ============================================
+   WORKER CARDS - UNIFIED DESIGN
+   ============================================ */
+
 .worker-card {
     background: #fff;
     border-radius: 12px;
@@ -123,6 +133,7 @@
     margin: 0;
     font-size: 16px;
     color: #1a1a1a;
+    font-weight: 600;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -148,7 +159,10 @@
     padding: 20px 25px;
 }
 
-/* Empty State */
+/* ============================================
+   EMPTY STATE - CONSISTENT
+   ============================================ */
+
 .empty-state {
     text-align: center;
     padding: 40px 20px;
@@ -166,7 +180,10 @@
     font-size: 14px;
 }
 
-/* Attendance List */
+/* ============================================
+   ATTENDANCE LIST - CONSISTENT DESIGN
+   ============================================ */
+
 .attendance-list {
     display: flex;
     flex-direction: column;
@@ -181,10 +198,12 @@
     background: #f8f9fa;
     border-radius: 8px;
     transition: all 0.3s ease;
+    border-left: 4px solid #DAA520;
 }
 
 .attendance-item:hover {
     background: #e9ecef;
+    transform: translateX(3px);
 }
 
 .attendance-date {
@@ -251,7 +270,10 @@
     flex-shrink: 0;
 }
 
-/* Info List */
+/* ============================================
+   INFO LIST - CONSISTENT
+   ============================================ */
+
 .info-list {
     display: flex;
     flex-direction: column;
@@ -275,6 +297,8 @@
     font-size: 13px;
     color: #666;
     font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .info-value {
@@ -284,12 +308,18 @@
     text-align: right;
 }
 
-/* Full Width Card */
+/* ============================================
+   FULL WIDTH CARD
+   ============================================ */
+
 .worker-card.full-width {
     grid-column: 1 / -1;
 }
 
-/* Attendance Calendar View */
+/* ============================================
+   CALENDAR VIEW - CONSISTENT
+   ============================================ */
+
 .calendar-header {
     display: flex;
     justify-content: space-between;
@@ -325,7 +355,10 @@
     color: #1a1a1a;
 }
 
-/* Schedule List */
+/* ============================================
+   SCHEDULE LIST - CONSISTENT
+   ============================================ */
+
 .schedule-list {
     display: flex;
     flex-direction: column;
@@ -340,6 +373,12 @@
     background: #f8f9fa;
     border-radius: 8px;
     border-left: 4px solid #DAA520;
+    transition: all 0.3s ease;
+}
+
+.schedule-item:hover {
+    background: #e9ecef;
+    transform: translateX(3px);
 }
 
 .schedule-day {
@@ -381,7 +420,10 @@
     gap: 8px;
 }
 
-/* Payroll Summary Card */
+/* ============================================
+   PAYROLL SUMMARY CARD - CONSISTENT
+   ============================================ */
+
 .payroll-summary {
     background: linear-gradient(135deg, rgba(218, 165, 32, 0.1), rgba(184, 134, 11, 0.1));
     border-radius: 12px;
@@ -416,7 +458,10 @@
     color: #1a1a1a;
 }
 
-/* Profile Form */
+/* ============================================
+   PROFILE FORM - CONSISTENT
+   ============================================ */
+
 .profile-form-section {
     margin-bottom: 30px;
 }
@@ -427,6 +472,13 @@
     margin: 0 0 20px 0;
     padding-bottom: 15px;
     border-bottom: 2px solid #DAA520;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.profile-form-section h3 i {
+    color: #DAA520;
 }
 
 .form-grid-2 {
@@ -442,10 +494,11 @@
 }
 
 .form-group label {
-    font-size: 12px;
+    font-size: 13px;
     color: #666;
     font-weight: 600;
     text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .form-group input,
@@ -457,20 +510,27 @@
     font-size: 14px;
     outline: none;
     transition: all 0.3s ease;
+    background: #f8f9fa;
 }
 
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
     border-color: #DAA520;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(218, 165, 32, 0.1);
 }
 
 .form-group input[readonly] {
-    background: #f5f5f5;
+    background: #e9ecef;
     color: #666;
+    cursor: not-allowed;
 }
 
-/* Responsive Design */
+/* ============================================
+   RESPONSIVE DESIGN - CONSISTENT
+   ============================================ */
+
 @media (max-width: 1200px) {
     .worker-grid {
         grid-template-columns: 1fr;
@@ -492,18 +552,30 @@
         justify-content: center;
     }
     
-    .stats-cards {
+    .form-grid-2 {
         grid-template-columns: 1fr;
     }
     
-    .form-grid-2 {
-        grid-template-columns: 1fr;
+    .info-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+    
+    .info-value {
+        text-align: left;
     }
 }
 
 @media (max-width: 480px) {
     .welcome-content h1 {
         font-size: 22px;
+    }
+    
+    .welcome-avatar {
+        width: 60px;
+        height: 60px;
+        font-size: 24px;
     }
     
     .attendance-item {
@@ -513,5 +585,9 @@
     .schedule-item {
         flex-direction: column;
         text-align: center;
+    }
+    
+    .schedule-day {
+        width: 100%;
     }
 }
