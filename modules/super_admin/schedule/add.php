@@ -131,7 +131,20 @@ try {
     <link rel="stylesheet" href="<?php echo CSS_URL; ?>/dashboard.css">
     <link rel="stylesheet" href="<?php echo CSS_URL; ?>/schedule.css">
     <link rel="stylesheet" href="<?php echo CSS_URL; ?>/forms.css">
+    <link rel="stylesheet" href="<?php echo CSS_URL; ?>/payroll.css">
+
+    <style>
+         input[type="time"] {
+                border: 1px solid #ccc;
+                background: #f9f9f9;
+                border-radius: 8px;
+                padding: 10px 14px;
+                height: 45px;
+                font-size: 15px;
+                }
+    </style>
 </head>
+
 <body>
     <div class="container">
         <?php include __DIR__ . '/../../../includes/sidebar.php'; ?>
