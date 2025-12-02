@@ -151,6 +151,7 @@ try {
     <link rel="stylesheet" href="<?php echo CSS_URL; ?>/workers.css">
     <link rel="stylesheet" href="<?php echo CSS_URL; ?>/buttons.css">
     <link rel="stylesheet" href="<?php echo CSS_URL; ?>/payroll.css">
+
     
 </head>
 <body>
@@ -222,6 +223,7 @@ try {
                     <form method="GET" action="" id="filterForm">
                         <div class="filter-row">
                             <div class="filter-group">
+                                <label>Worker</label>
                                 <select name="worker" onchange="document.getElementById('filterForm').submit()">
                                     <option value="0">All Workers</option>
                                     <?php foreach ($workers as $w): ?>
@@ -234,6 +236,7 @@ try {
                             </div>
                             
                             <div class="filter-group">
+                                <label>Type</label>
                                 <select name="type" onchange="document.getElementById('filterForm').submit()">
                                     <option value="">All Types</option>
                                     <option value="sss" <?php echo $type_filter === 'sss' ? 'selected' : ''; ?>>SSS</option>
@@ -247,6 +250,7 @@ try {
                             </div>
                             
                             <div class="filter-group">
+                                <label>Deduction Status</label>
                                 <select name="status" onchange="document.getElementById('filterForm').submit()">
                                     <option value="">All Status</option>
                                     <option value="active" <?php echo $status_filter === 'active' ? 'selected' : ''; ?>>Active</option>
@@ -255,6 +259,7 @@ try {
                             </div>
                             
                             <div class="filter-group" style="flex: 2;">
+                                <label>Search</label>
                                 <input type="text" 
                                        name="search" 
                                        value="<?php echo htmlspecialchars($search_query); ?>"

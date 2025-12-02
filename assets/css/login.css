@@ -192,7 +192,7 @@ h2 {
 .toggle-password {
     position: absolute;
     top: 50%;
-    right: 15px;
+    right: 8px;
     transform: translateY(-50%);
     cursor: pointer;
     color: #666;

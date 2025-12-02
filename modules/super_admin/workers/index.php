@@ -142,6 +142,7 @@ try {
     <link rel="stylesheet" href="<?php echo CSS_URL; ?>/dashboard.css">
     <link rel="stylesheet" href="<?php echo CSS_URL; ?>/workers.css">
     <link rel="stylesheet" href="<?php echo CSS_URL; ?>/buttons.css">
+    <link rel="stylesheet" href="<?php echo CSS_URL; ?>/payroll.css">
 </head>
 <body>
     <div class="container">
@@ -179,6 +180,7 @@ try {
                     <form method="GET" action="" id="filterForm">
                         <div class="filter-row">
                             <div class="filter-group">
+                                <label>Position</label>
                                 <select name="position" id="positionFilter" onchange="submitFilter()">
                                     <option value="">All Positions</option>
                                     <?php foreach ($positions as $pos): ?>
@@ -191,6 +193,7 @@ try {
                             </div>
                             
                             <div class="filter-group">
+                                <label>Employment Status</label>
                                 <select name="status" id="statusFilter" onchange="submitFilter()">
                                     <option value="">All Status</option>
                                     <option value="active" <?php echo $status_filter === 'active' ? 'selected' : ''; ?>>Active</option>
@@ -201,6 +204,7 @@ try {
                             </div>
                             
                             <div class="filter-group">
+                                <label>Experience</label>
                                 <select name="experience" id="experienceFilter" onchange="submitFilter()">
                                     <option value="">All Experience</option>
                                     <option value="0-1" <?php echo $experience_filter === '0-1' ? 'selected' : ''; ?>>0-1 years</option>
@@ -211,7 +215,7 @@ try {
                             </div>
                             
                             <button type="button" class="btn btn-filter" onclick="submitFilter()">
-                                <i class="fas fa-filter"></i> Filter
+                                <i class="fas fa-filter"></i> Apply
                             </button>
                         </div>
                     </form>

@@ -196,6 +196,7 @@ try {
                     <form method="GET" action="" id="filterForm">
                         <div class="filter-row">
                             <div class="filter-group">
+                                <label>Worker</label>
                                 <select name="worker" onchange="document.getElementById('filterForm').submit()">
                                     <option value="0">All Workers</option>
                                     <?php foreach ($workers as $w): ?>
@@ -208,6 +209,7 @@ try {
                             </div>
                             
                             <div class="filter-group">
+                                <label>Cash Advance Status</label>
                                 <select name="status" onchange="document.getElementById('filterForm').submit()">
                                     <option value="">All Status</option>
                                     <option value="pending" <?php echo $status_filter === 'pending' ? 'selected' : ''; ?>>Pending</option>
@@ -219,6 +221,7 @@ try {
                             </div>
                             
                             <div class="filter-group" style="flex: 2;">
+                                <label>Search</label>
                                 <input type="text" 
                                        name="search" 
                                        value="<?php echo htmlspecialchars($search_query); ?>"

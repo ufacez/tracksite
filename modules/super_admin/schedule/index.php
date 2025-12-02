@@ -227,7 +227,7 @@ try {
                             </div>
                             
                             <div class="filter-group">
-                                <label>Status</label>
+                                <label>Schedule Status</label>
                                 <select name="status" onchange="document.getElementById('filterForm').submit()">
                                     <option value="active" <?php echo $status_filter === 'active' ? 'selected' : ''; ?>>Active</option>
                                     <option value="inactive" <?php echo $status_filter === 'inactive' ? 'selected' : ''; ?>>Inactive</option>

@@ -185,7 +185,7 @@ $stats = getAuditStats($db);
                         
                         <div class="filter-actions">
                             <button type="submit" class="btn-filter">
-                                <i class="fas fa-filter"></i> Apply Filters
+                                <i class="fas fa-filter"></i> Apply
                             </button>
                             <button type="button" class="btn-reset" onclick="resetFilters()">
                                 <i class="fas fa-redo"></i> Reset

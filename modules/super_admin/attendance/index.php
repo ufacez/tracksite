@@ -83,6 +83,7 @@ try {
           crossorigin="anonymous" />
     <link rel="stylesheet" href="<?php echo CSS_URL; ?>/dashboard.css">
     <link rel="stylesheet" href="<?php echo CSS_URL; ?>/attendance.css">
+    <link rel="stylesheet" href="<?php echo CSS_URL; ?>/schedule.css">
 </head>
 <body>
     <div class="container">
@@ -120,8 +121,9 @@ try {
                     <form method="GET" action="" id="filterForm">
                         <div class="filter-row">
                             <div class="filter-group">
+                                <label>Position</label>
                                 <select name="position" id="positionFilter" onchange="document.getElementById('filterForm').submit()">
-                                    <option value="">All Position</option>
+                                    <option value="">All Positions</option>
                                     <?php foreach ($positions as $pos): ?>
                                         <option value="<?php echo htmlspecialchars($pos); ?>" 
                                                 <?php echo $position_filter === $pos ? 'selected' : ''; ?>>
@@ -132,6 +134,7 @@ try {
                             </div>
                             
                             <div class="filter-group">
+                                <label>Attendance Status</label>
                                 <select name="status" id="statusFilter" onchange="document.getElementById('filterForm').submit()">
                                     <option value="">All Status</option>
                                     <option value="present" <?php echo $status_filter === 'present' ? 'selected' : ''; ?>>Present</option>
@@ -142,12 +145,12 @@ try {
                             </div>
                             
                             <div class="filter-group">
+                                <label>Date Range</label>
                                 <input type="date" name="date" id="dateFilter" value="<?php echo htmlspecialchars($date_filter); ?>" onchange="document.getElementById('filterForm').submit()">
                             </div>
                             
                             <button type="submit" class="btn btn-filter">
-                                <i class="fas fa-filter"></i> Filter
-                            </button>
+                                <i class="fas fa-filter"></i> Apply
                             
                             <?php if (!empty($position_filter) || !empty($status_filter) || $date_filter !== date('Y-m-d')): ?>
                             <button type="button" 

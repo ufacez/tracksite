@@ -194,6 +194,7 @@ $total_archived = count($archived_items);
                     <form method="GET" action="" id="filterForm">
                         <div class="filter-row">
                             <div class="filter-group">
+                                <label>Type</label>
                                 <select name="type" id="typeFilter" onchange="document.getElementById('filterForm').submit()">
                                     <option value="">All Types</option>
                                     <option value="workers" <?php echo $type_filter === 'workers' ? 'selected' : ''; ?>>Workers</option>
@@ -202,6 +203,7 @@ $total_archived = count($archived_items);
                             </div>
                             
                             <div class="filter-group">
+                                <label>Date range</label>
                                 <input type="date" 
                                        name="date" 
                                        id="dateFilter" 
@@ -210,6 +212,7 @@ $total_archived = count($archived_items);
                             </div>
                             
                             <div class="filter-group" style="flex: 2;">
+                                <label>Search</label>
                                 <input type="text" 
                                        name="search" 
                                        id="searchInput" 
