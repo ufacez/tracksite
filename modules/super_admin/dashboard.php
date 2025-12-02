@@ -447,7 +447,7 @@ function getEnhancedActivityDescription($activity) {
                                 <thead>
                                     <tr>
                                         <th>Worker</th>
-                                        <th>Trade</th>
+                                        <th>Position</th>
                                         <th>Time In</th>
                                         <th>Status</th>
                                         <th>Actions</th>

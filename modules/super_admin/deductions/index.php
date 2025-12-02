@@ -149,6 +149,7 @@ try {
     <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css"/>
     <link rel="stylesheet" href="<?php echo CSS_URL; ?>/dashboard.css">
     <link rel="stylesheet" href="<?php echo CSS_URL; ?>/workers.css">
+    <link rel="stylesheet" href="<?php echo CSS_URL; ?>/buttons.css">
 </head>
 <body>
     <div class="container">

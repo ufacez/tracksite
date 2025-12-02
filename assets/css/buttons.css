@@ -1,0 +1,39 @@
+/* UNIVERSAL ACTION BUTTON STYLES — USED BY BOTH WORKERS & PAYROLL */
+
+.action-btn {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: 0.25s ease;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+}
+
+/* Hover animation */
+.action-btn:hover {
+    transform: translateY(-2px);
+    opacity: 0.9;
+}
+
+/* Button Colors — SAME FOR BOTH MODULES */
+
+.btn-view {
+    background: #17a2b8;   /* Blue */
+}
+
+.btn-edit {
+    background: #ffc107;   /* Yellow */
+    color: #000;
+}
+
+.btn-delete {
+    background: #dc3545;   /* Red */
+}
+
+.btn-success {
+    background: #28a745;   /* Green */
+}

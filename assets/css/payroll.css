@@ -83,22 +83,28 @@
     color: #fff;
 }
 
+
 .card-blue .stat-icon {
-    background: linear-gradient(135deg, #DAA520 0%, #2b2a2a 100%);
+    background: rgba(52, 152, 219, 0.1) !important;
+    color: #3498db !important;
+}
+
+
+.card-green .stat-icon {
+    background: rgba(39, 174, 96, 0.1) !important;
+    color: #27ae60 !important;
 }
 
 .card-orange .stat-icon {
-    background: linear-gradient(135deg, #DAA520 0%, #2b2a2a 100%);
+    background: rgba(243, 156, 18, 0.1) !important;
+    color: #f39c12 !important;
 }
 
-.card-green .stat-icon {
-    background: linear-gradient(135deg, #DAA520 0%, #2b2a2a 100%);
-}
 
 .card-purple .stat-icon {
-    background: linear-gradient(135deg, #DAA520 0%, #2b2a2a 100%);
+    background: rgba(155, 89, 182, 0.1) !important;
+    color: #9b59b6 !important;
 }
-
 .stat-info {
     flex: 1;
 }

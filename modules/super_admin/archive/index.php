@@ -160,6 +160,7 @@ $total_archived = count($archived_items);
           crossorigin="anonymous" />
     <link rel="stylesheet" href="<?php echo CSS_URL; ?>/dashboard.css"> 
     <link rel="stylesheet" href="<?php echo CSS_URL; ?>/workers.css">
+    <link rel="stylesheet" href="<?php echo CSS_URL; ?>/buttons.css">
 </head>
 <body>
     <div class="container">

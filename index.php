@@ -35,14 +35,5 @@ if (isLoggedIn()) {
 require_once 'includes/notifications.php';  
 
 // Test notification
-createNotification(
-    $db, 
-    $user_id, 
-    NOTIFICATION_INFO, 
-    'Test Notification', 
-    'This is a test message',
-    BASE_URL . '/modules/super_admin/dashboard.php'
-);
-
 
 ?>
