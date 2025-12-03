@@ -1,0 +1,803 @@
+/**
+ * Enhanced Dashboard Styles - Dashboard V2 Design
+ * TrackSite Construction Management System
+ * 
+ * This file contains the enhanced visual styling from dashboard_v2
+ * while maintaining compatibility with dashboard functionality
+ */
+
+/* ============================================
+   WELCOME SECTION
+   ============================================ */
+
+.welcome-section {
+    background: linear-gradient(135deg, #3b3434 0%, #a79922 100%);
+    padding: 30px;
+    border-radius: 15px;
+    margin-bottom: 30px;
+    color: white;
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+    animation: fadeInDown 0.6s ease;
+}
+
+.welcome-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.welcome-text h1 {
+    margin: 0 0 10px 0;
+    font-size: 32px;
+    font-weight: 700;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.welcome-text p {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 16px;
+}
+
+.welcome-stats {
+    display: flex;
+    gap: 30px;
+}
+
+.welcome-stat {
+    text-align: center;
+}
+
+.welcome-stat-value {
+    font-size: 28px;
+    font-weight: 700;
+    display: block;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.welcome-stat-label {
+    font-size: 12px;
+    opacity: 0.9;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ============================================
+   ENHANCED STAT CARDS
+   ============================================ */
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 25px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    border-left: 4px solid transparent;
+    animation: fadeInUp 0.6s ease;
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    transition: width 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card:hover::before {
+    width: 100%;
+    opacity: 0.05;
+}
+
+.card-blue {
+    border-left-color: #3498db;
+}
+.card-blue::before {
+    background: #3498db;
+}
+
+.card-green {
+    border-left-color: #27ae60;
+}
+.card-green::before {
+    background: #27ae60;
+}
+
+.card-orange {
+    border-left-color: #f39c12;
+}
+.card-orange::before {
+    background: #f39c12;
+}
+
+.card-purple {
+    border-left-color: #9b59b6;
+}
+.card-purple::before {
+    background: #9b59b6;
+}
+
+.stat-header {
+    display: flex;
+    justify-content: space-between !important;
+    align-items: flex-start;
+}
+
+.stat-icon {
+    width: 60px;
+    margin-left: auto !important;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    flex-shrink: 0;
+}
+
+.card-blue .stat-icon {
+    background: rgba(52, 152, 219, 0.1);
+    color: #3498db;
+}
+
+.card-green .stat-icon {
+    background: rgba(39, 174, 96, 0.1);
+    color: #27ae60;
+}
+
+.card-orange .stat-icon {
+    background: rgba(243, 156, 18, 0.1);
+    color: #f39c12;
+}
+
+.card-purple .stat-icon {
+    background: rgba(155, 89, 182, 0.1);
+    color: #9b59b6;
+}
+
+.card-label {
+    font-size: 13px;
+    color: #666;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+}
+
+.card-value {
+    font-size: 36px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-bottom: 8px;
+    line-height: 1;
+}
+
+.card-change {
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: #666;
+}
+
+.change-positive {
+    color: #27ae60;
+}
+
+.change-positive i {
+    animation: bounce 2s infinite;
+}
+
+/* ============================================
+   ANALYTICS GRID
+   ============================================ */
+
+.analytics-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 25px;
+    margin-bottom: 30px;
+}
+
+.chart-card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+    animation: fadeIn 0.6s ease;
+}
+
+.chart-card:hover {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.chart-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1a1a1a;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.chart-title i {
+    color: #DAA520;
+}
+
+.chart-filter {
+    display: flex;
+    gap: 10px;
+}
+
+.filter-btn {
+    padding: 8px 16px;
+    border: 2px solid #e0e0e0;
+    background: white;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: #666;
+}
+
+.filter-btn:hover {
+    border-color: #DAA520;
+    color: #1a1a1a;
+}
+
+.filter-btn.active {
+    background: #DAA520;
+    border-color: #DAA520;
+    color: #1a1a1a;
+    box-shadow: 0 2px 8px rgba(218, 165, 32, 0.3);
+}
+
+.chart-container {
+    position: relative;
+    height: 300px;
+}
+
+/* ============================================
+   DISTRIBUTION ITEMS
+   ============================================ */
+
+.distribution-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 0;
+    border-bottom: 1px solid #f0f0f0;
+    transition: all 0.3s ease;
+}
+
+.distribution-item:hover {
+    background: #f8f9fa;
+    padding-left: 10px;
+    padding-right: 10px;
+    border-radius: 8px;
+}
+
+.distribution-item:last-child {
+    border-bottom: none;
+}
+
+.distribution-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 500;
+}
+
+.distribution-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+.distribution-number {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1a1a1a;
+}
+
+.distribution-percent {
+    font-size: 12px;
+    color: #999;
+    margin-left: 5px;
+}
+
+/* ============================================
+   QUICK ACTIONS
+   ============================================ */
+
+.quick-actions {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    animation: fadeIn 0.8s ease;
+}
+
+.quick-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.quick-action-btn {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 18px;
+    background: #f8f9fa;
+    border: 2px solid transparent;
+    border-radius: 12px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.quick-action-btn:hover {
+    background: white;
+    border-color: #DAA520;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(218, 165, 32, 0.2);
+}
+
+.quick-action-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+}
+
+.quick-action-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 3px;
+}
+
+.quick-action-desc {
+    font-size: 12px;
+    color: #666;
+}
+
+/* ============================================
+   ENHANCED TABLES
+   ============================================ */
+
+.tables-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 25px;
+    margin-bottom: 30px;
+}
+
+.table-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    transition: all 0.3s ease;
+    animation: fadeInUp 0.8s ease;
+}
+
+.table-card:hover {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.table-header {
+    padding: 20px 25px;
+    border-bottom: 2px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8f9fa;
+}
+
+.table-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.view-all {
+    font-size: 13px;
+    color: #DAA520;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.view-all:hover {
+    color: #B8860B;
+    transform: translateX(3px);
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th {
+    background: #000000 !important;
+    padding: 15px 20px;
+    text-align: left;
+    font-size: 12px;
+    color: #ffffff !important;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    
+}
+
+.data-table td {
+    padding: 18px 20px;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.data-table tbody tr:hover td {
+    background: #f8f9fa;
+}
+
+.data-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.worker-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.worker-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #DAA520, #B8860B);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    color: #1a1a1a;
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+.status-badge {
+    padding: 6px 12px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.status-present {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-absent {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+/* ============================================
+   ACTIVITY SECTION
+   ============================================ */
+
+.activity-section {
+    grid-column: 1 / -1;
+    animation: fadeIn 1s ease;
+}
+
+.activity-list {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.activity-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.activity-list::-webkit-scrollbar-track {
+    background: #f0f0f0;
+    border-radius: 3px;
+}
+
+.activity-list::-webkit-scrollbar-thumb {
+    background: #DAA520;
+    border-radius: 3px;
+}
+
+.activity-item {
+    display: flex;
+    gap: 15px;
+    padding: 18px 20px;
+    border-bottom: 1px solid #f0f0f0;
+    transition: all 0.3s ease;
+}
+
+.activity-item:hover {
+    background: #f8f9fa;
+    transform: translateX(5px);
+}
+
+.activity-item:last-child {
+    border-bottom: none;
+}
+
+.activity-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 16px;
+}
+
+.activity-icon-success {
+    background: rgba(40, 167, 69, 0.1);
+    color: #28a745;
+}
+
+.activity-icon-info {
+    background: rgba(23, 162, 184, 0.1);
+    color: #17a2b8;
+}
+
+.activity-icon-warning {
+    background: rgba(255, 193, 7, 0.1);
+    color: #ffc107;
+}
+
+.activity-icon-danger {
+    background: rgba(220, 53, 69, 0.1);
+    color: #dc3545;
+}
+
+.activity-icon-secondary {
+    background: rgba(108, 117, 125, 0.1);
+    color: #6c757d;
+}
+
+.activity-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.activity-text {
+    font-size: 14px;
+    color: #333;
+    margin-bottom: 8px;
+    line-height: 1.5;
+}
+
+.activity-text strong {
+    color: #1a1a1a;
+    font-weight: 600;
+}
+
+.activity-action {
+    color: #666;
+}
+
+.activity-meta {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    font-size: 12px;
+    color: #999;
+    flex-wrap: wrap;
+}
+
+.activity-time i {
+    margin-right: 4px;
+}
+
+.activity-badge {
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-create {
+    background: #d4edda;
+    color: #155724;
+}
+
+.badge-update {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.badge-delete {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.badge-login {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.badge-approve {
+    background: #d4edda;
+    color: #155724;
+}
+
+.badge-reject {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% {
+        transform: translateY(0);
+    }
+    40% {
+        transform: translateY(-3px);
+    }
+    60% {
+        transform: translateY(-2px);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.8;
+        transform: scale(1.1);
+    }
+}
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+@media (max-width: 1200px) {
+    .analytics-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .welcome-stats {
+        width: 100%;
+        justify-content: space-around;
+    }
+}
+
+@media (max-width: 768px) {
+    .tables-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .welcome-text h1 {
+        font-size: 24px;
+    }
+    
+    .welcome-stats {
+        gap: 15px;
+    }
+    
+    .welcome-stat-value {
+        font-size: 22px;
+    }
+    
+    .quick-actions-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .chart-filter {
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 480px) {
+    .welcome-section {
+        padding: 20px;
+    }
+    
+    .stat-card {
+        padding: 20px;
+    }
+    
+    .card-value {
+        font-size: 28px;
+    }
+    
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        font-size: 22px;
+    }
+}

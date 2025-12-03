@@ -1,7 +1,8 @@
 <?php
 /**
- * Super Admin Dashboard - FIXED WITH COMPREHENSIVE ACTIVITY
+ * Super Admin Dashboard - Enhanced Version
  * TrackSite Construction Management System
+ * Combines functionality from dashboard.php with styling from dashboard_v2.php
  */
 
 // Define constant to allow includes
@@ -25,7 +26,7 @@ $full_name = $_SESSION['full_name'] ?? 'Administrator';
 // Get flash message
 $flash = getFlashMessage();
 
-// Fetch dashboard statistics - FIXED to exclude archived records
+// Fetch dashboard statistics
 try {
     // Total active workers (excluding archived)
     $stmt = $db->query("SELECT COUNT(*) as total FROM workers 
@@ -57,6 +58,16 @@ try {
                         AND w.is_archived = FALSE");
     $overtime_today = $stmt->fetch()['total'];
     
+    // Calculate attendance rate
+    $attendance_rate = $total_workers > 0 ? round(($on_site_today / $total_workers) * 100) : 0;
+    
+    // This month payroll total
+    $stmt = $db->query("SELECT SUM(net_pay) as total FROM payroll 
+                        WHERE MONTH(pay_period_end) = MONTH(CURDATE()) 
+                        AND YEAR(pay_period_end) = YEAR(CURDATE())
+                        AND is_archived = FALSE");
+    $month_payroll = $stmt->fetch()['total'] ?? 0;
+    
     // Recent attendance (last 6 records, excluding archived)
     $stmt = $db->query("SELECT a.*, w.first_name, w.last_name, w.worker_code, w.position 
                         FROM attendance a 
@@ -84,7 +95,19 @@ try {
                         LIMIT 5");
     $today_schedules = $stmt->fetchAll();
     
-    // ENHANCED: Recent Activity with detailed information
+    // Attendance trend for last 7 days
+    $stmt = $db->query("SELECT 
+                        DATE_FORMAT(attendance_date, '%a') as day_name,
+                        COUNT(CASE WHEN status IN ('present', 'late', 'overtime') THEN 1 END) as present_count,
+                        COUNT(CASE WHEN status = 'absent' THEN 1 END) as absent_count
+                        FROM attendance
+                        WHERE attendance_date >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+                        AND is_archived = FALSE
+                        GROUP BY attendance_date
+                        ORDER BY attendance_date ASC");
+    $attendance_trend = $stmt->fetchAll();
+    
+    // Recent Activity
     $sql = "SELECT 
                 al.*,
                 u.username,
@@ -102,27 +125,12 @@ try {
                          FROM payroll p
                          JOIN workers w ON p.worker_id = w.worker_id
                          WHERE p.payroll_id = al.record_id)
-                    WHEN al.table_name = 'cash_advances' THEN
-                        (SELECT CONCAT(w.first_name, ' ', w.last_name)
-                         FROM cash_advances ca
-                         JOIN workers w ON ca.worker_id = w.worker_id
-                         WHERE ca.advance_id = al.record_id)
-                    WHEN al.table_name = 'schedules' THEN
-                        (SELECT CONCAT(w.first_name, ' ', w.last_name)
-                         FROM schedules s
-                         JOIN workers w ON s.worker_id = w.worker_id
-                         WHERE s.schedule_id = al.record_id)
-                    WHEN al.table_name = 'deductions' THEN
-                        (SELECT CONCAT(w.first_name, ' ', w.last_name)
-                         FROM deductions d
-                         JOIN workers w ON d.worker_id = w.worker_id
-                         WHERE d.deduction_id = al.record_id)
                     ELSE NULL
                 END as affected_person
             FROM activity_logs al
             LEFT JOIN users u ON al.user_id = u.user_id
             ORDER BY al.created_at DESC
-            LIMIT 15";
+            LIMIT 10";
     $stmt = $db->query($sql);
     $recent_activities = $stmt->fetchAll();
     
@@ -132,8 +140,11 @@ try {
     $on_site_today = 0;
     $on_leave = 0;
     $overtime_today = 0;
+    $attendance_rate = 0;
+    $month_payroll = 0;
     $recent_attendance = [];
     $today_schedules = [];
+    $attendance_trend = [];
     $recent_activities = [];
 }
 
@@ -144,7 +155,6 @@ function getEnhancedActivityDescription($activity) {
     $description = $activity['description'];
     $affected_person = $activity['affected_person'];
     
-    // Build contextual description
     $context = '';
     
     switch($action) {
@@ -173,27 +183,10 @@ function getEnhancedActivityDescription($activity) {
         case 'reject':
             $context = 'rejected ';
             break;
-        case 'mark_attendance':
-            $context = 'marked attendance for ';
-            break;
-        case 'approve_cashadvance':
-            $context = 'approved cash advance for ';
-            break;
-        case 'reject_cashadvance':
-            $context = 'rejected cash advance for ';
-            break;
-        case 'record_cashadvance_payment':
-            $context = 'recorded cash advance payment for ';
-            break;
-        case 'change_password':
-            return 'changed their password';
-        case 'update_user_status':
-            return 'updated user status';
         default:
             $context = $action . ' ';
     }
     
-    // Add table context
     switch($table) {
         case 'workers':
             $context .= 'worker';
@@ -207,24 +200,12 @@ function getEnhancedActivityDescription($activity) {
         case 'cash_advances':
             $context .= 'cash advance';
             break;
-        case 'schedules':
-            $context .= 'schedule';
-            break;
-        case 'deductions':
-            $context .= 'deduction';
-            break;
         default:
             $context .= 'record';
     }
     
-    // Add affected person if available
     if ($affected_person) {
         $context .= ' for ' . $affected_person;
-    }
-    
-    // Add description if available and different from context
-    if ($description && !str_contains(strtolower($description), strtolower($context))) {
-        $context .= ' - ' . $description;
     }
     
     return $context;
@@ -243,125 +224,12 @@ function getEnhancedActivityDescription($activity) {
           integrity="sha384-AYmEC3Yw5cVb3ZcuHtOA93w35dYTsvhLPVnYs9eStHfGJvOvKxVfELGroGkvsg+p" 
           crossorigin="anonymous" />
     
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
     <!-- Custom CSS -->
     <link rel="stylesheet" href="<?php echo CSS_URL; ?>/dashboard.css">
-    <style>
-        /* Enhanced Activity Section Styles */
-        .activity-section {
-            grid-column: 1 / -1;
-            margin-top: 20px;
-        }
-        
-        .activity-list {
-            max-height: 600px;
-            overflow-y: auto;
-        }
-        
-        .activity-item {
-            display: flex;
-            gap: 15px;
-            padding: 15px;
-            border-bottom: 1px solid #f0f0f0;
-            transition: all 0.3s ease;
-        }
-        
-        .activity-item:hover {
-            background: #f8f9fa;
-        }
-        
-        .activity-item:last-child {
-            border-bottom: none;
-        }
-        
-        .activity-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            font-size: 16px;
-        }
-        
-        .activity-icon-success {
-            background: rgba(40, 167, 69, 0.1);
-            color: #28a745;
-        }
-        
-        .activity-icon-info {
-            background: rgba(23, 162, 184, 0.1);
-            color: #17a2b8;
-        }
-        
-        .activity-icon-warning {
-            background: rgba(255, 193, 7, 0.1);
-            color: #ffc107;
-        }
-        
-        .activity-icon-danger {
-            background: rgba(220, 53, 69, 0.1);
-            color: #dc3545;
-        }
-        
-        .activity-icon-secondary {
-            background: rgba(108, 117, 125, 0.1);
-            color: #6c757d;
-        }
-        
-        .activity-content {
-            flex: 1;
-            min-width: 0;
-        }
-        
-        .activity-text {
-            font-size: 14px;
-            color: #333;
-            margin-bottom: 5px;
-            line-height: 1.5;
-        }
-        
-        .activity-text strong {
-            color: #1a1a1a;
-            font-weight: 600;
-        }
-        
-        .activity-action {
-            color: #666;
-        }
-        
-        .activity-description {
-            color: #888;
-            font-size: 13px;
-        }
-        
-        .activity-meta {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            font-size: 12px;
-            color: #999;
-        }
-        
-        .activity-time i {
-            margin-right: 4px;
-        }
-        
-        .activity-badge {
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-        
-        .badge-create { background: #d4edda; color: #155724; }
-        .badge-update { background: #fff3cd; color: #856404; }
-        .badge-delete { background: #f8d7da; color: #721c24; }
-        .badge-login { background: #d1ecf1; color: #0c5460; }
-        .badge-approve { background: #d4edda; color: #155724; }
-        .badge-reject { background: #f8d7da; color: #721c24; }
-    </style>
+    <link rel="stylesheet" href="<?php echo CSS_URL; ?>/dashboard-enhanced.css">
 </head>
 <body>
     <div class="container">
@@ -387,217 +255,347 @@ function getEnhancedActivityDescription($activity) {
                 </div>
                 <?php endif; ?>
                 
-                <!-- Statistics Cards -->
-                <div class="stats-cards">
-                    <div class="stat-card card-blue">
-                        <div class="card-content">
-                            <div class="card-value"><?php echo $total_workers; ?></div>
-                            <div class="card-label">Total Workers</div>
+                <!-- Welcome Section -->
+                <div class="welcome-section">
+                    <div class="welcome-content">
+                        <div class="welcome-text">
+                            <h1>Welcome back, <?php echo htmlspecialchars($full_name); ?>!</h1>
+                            <p>Here's what's happening with your workforce today</p>
                         </div>
-                        <div class="card-icon">
-                            <i class="fas fa-users"></i>
+                        <div class="welcome-stats">
+                            <div class="welcome-stat">
+                                <span class="welcome-stat-value"><?php echo $attendance_rate; ?>%</span>
+                                <span class="welcome-stat-label">Attendance Rate</span>
+                            </div>
+                            <div class="welcome-stat">
+                                <span class="welcome-stat-value"><?php echo $total_workers; ?></span>
+                                <span class="welcome-stat-label">Active Workers</span>
+                            </div>
+                            <div class="welcome-stat">
+                                <span class="welcome-stat-value"><?php echo formatCurrency($month_payroll); ?></span>
+                                <span class="welcome-stat-label">This Month</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Statistics Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card card-blue">
+                        <div class="stat-header">
+                            <div>
+                                <div class="card-label=">Total Workers</div>
+                                <div class="card-value"><?php echo $total_workers; ?></div>
+                                <div class="card-change change-positive">
+                                    <i class="fas fa-users"></i>
+                                    <span>Active employees</span>
+                                </div>
+                            </div>
+                            <div class="stat-icon">
+                                <i class="fas fa-users"></i>
+                            </div>
                         </div>
                     </div>
                     
                     <div class="stat-card card-green">
-                        <div class="card-content">
-                            <div class="card-value"><?php echo $on_site_today; ?></div>
-                            <div class="card-label">On Site Today</div>
-                        </div>
-                        <div class="card-icon">
-                            <i class="fas fa-user-check"></i>
+                        <div class="stat-header">
+                            <div>
+                                <div class="card-label">On Site Today</div>
+                                <div class="card-value"><?php echo $on_site_today; ?></div>
+                                <div class="card-change change-positive">
+                                    <i class="fas fa-check"></i>
+                                    <span><?php echo $attendance_rate; ?>% present</span>
+                                </div>
+                            </div>
+                            <div class="stat-icon">
+                                <i class="fas fa-user-check"></i>
+                            </div>
                         </div>
                     </div>
                     
                     <div class="stat-card card-orange">
-                        <div class="card-content">
-                            <div class="card-value"><?php echo $on_leave; ?></div>
-                            <div class="card-label">On Leave</div>
-                        </div>
-                        <div class="card-icon">
-                            <i class="fas fa-calendar-times"></i>
+                        <div class="stat-header">
+                            <div>
+                                <div class="card-label">On Leave</div>
+                                <div class="card-value"><?php echo $on_leave; ?></div>
+                                <div class="card-change">
+                                    <i class="fas fa-calendar"></i>
+                                    <span>Scheduled</span>
+                                </div>
+                            </div>
+                            <div class="stat-icon">
+                                <i class="fas fa-calendar-times"></i>
+                            </div>
                         </div>
                     </div>
                     
                     <div class="stat-card card-purple">
-                        <div class="card-content">
-                            <div class="card-value"><?php echo $overtime_today; ?></div>
-                            <div class="card-label">Overtime Today</div>
-                        </div>
-                        <div class="card-icon">
-                            <i class="fas fa-clock"></i>
+                        <div class="stat-header">
+                            <div>
+                                <div class="card-label">Overtime Today</div>
+                                <div class="card-value"><?php echo $overtime_today; ?></div>
+                                <div class="card-change">
+                                    <i class="fas fa-clock"></i>
+                                    <span>Extended hours</span>
+                                </div>
+                            </div>
+                            <div class="stat-icon">
+                                <i class="fas fa-business-time"></i>
+                            </div>
                         </div>
                     </div>
                 </div>
-                
-                <!-- Tables Section -->
-                <div class="tables-section">
-                    
-                    <!-- Recent Attendance Table -->
-                    <div class="table-container recent-attendance">
-                        <div class="table-header">
-                            <h2>Recent Attendance</h2>
-                            <a href="<?php echo BASE_URL; ?>/modules/super_admin/attendance/index.php" class="btn btn-view-all">
-                                View All
-                            </a>
-                        </div>
-                        
-                        <div class="table-wrapper">
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>Worker</th>
-                                        <th>Position</th>
-                                        <th>Time In</th>
-                                        <th>Status</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php if (empty($recent_attendance)): ?>
-                                    <tr>
-                                        <td colspan="5" class="no-data">
-                                            <i class="fas fa-inbox"></i>
-                                            <p>No attendance records for today</p>
-                                        </td>
-                                    </tr>
-                                    <?php else: ?>
-                                        <?php foreach ($recent_attendance as $record): ?>
-                                        <tr>
-                                            <td>
-                                                <div class="worker-info">
-                                                    <div class="worker-avatar">
-                                                        <?php echo getInitials($record['first_name'] . ' ' . $record['last_name']); ?>
-                                                    </div>
-                                                    <span><?php echo htmlspecialchars($record['first_name'] . ' ' . $record['last_name']); ?></span>
-                                                </div>
-                                            </td>
-                                            <td><?php echo htmlspecialchars($record['position']); ?></td>
-                                            <td><?php echo $record['time_in'] ? formatTime($record['time_in']) : '--'; ?></td>
-                                            <td>
-                                                <span class="status-badge status-<?php echo $record['status']; ?>">
-                                                    <?php echo ucfirst($record['status']); ?>
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <div class="action-icons">
-                                                    <button class="action-icon icon-view" 
-                                                            onclick="window.location.href='<?php echo BASE_URL; ?>/modules/super_admin/attendance/index.php'"
-                                                            title="View Details">
-                                                        <i class="far fa-eye"></i>
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    
-                    <!-- Today's Schedule Table -->
-                    <div class="table-container today-schedule">
-                        <div class="table-header">
-                            <h2>Shifts Today</h2>
-                            <a href="<?php echo BASE_URL; ?>/modules/super_admin/schedule/index.php" class="btn btn-view-all">
-                                View All
-                            </a>
-                        </div>
-                        
-                        <div class="table-wrapper">
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>Worker</th>
-                                        <th>Shift Time</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php if (empty($today_schedules)): ?>
-                                    <tr>
-                                        <td colspan="3" class="no-data">
-                                            <i class="fas fa-calendar-times"></i>
-                                            <p>No schedules for today</p>
-                                        </td>
-                                    </tr>
-                                    <?php else: ?>
-                                        <?php foreach ($today_schedules as $schedule): ?>
-                                        <tr>
-                                            <td>
-                                                <div class="worker-info">
-                                                    <div class="worker-avatar-small">
-                                                        <?php echo getInitials($schedule['first_name'] . ' ' . $schedule['last_name']); ?>
-                                                    </div>
-                                                    <span><?php echo htmlspecialchars($schedule['first_name'] . ' ' . $schedule['last_name']); ?></span>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <?php echo date('H:i', strtotime($schedule['start_time'])); ?> - 
-                                                <?php echo date('H:i', strtotime($schedule['end_time'])); ?>
-                                            </td>
-                                            <td>
-                                                <?php if ($schedule['has_attendance'] > 0): ?>
-                                                    <span class="status-badge status-present">Checked In</span>
-                                                <?php else: ?>
-                                                    <span class="status-badge status-pending">Pending</span>
-                                                <?php endif; ?>
-                                            </td>
-                                        </tr>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    
-                    <!-- Enhanced Recent Activity Section -->
-                    <div class="activity-section">
-                        <div class="table-container">
-                            <div class="table-header">
-                                <h2><i class="fas fa-history"></i> Recent System Activity</h2>
-                                <span class="activity-subtitle">Last 15 activities across all modules</span>
+
+                <!-- Analytics Section -->
+                <div class="analytics-grid">
+                    <!-- Attendance Trend Chart -->
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <div class="chart-title">
+                                <i class="fas fa-chart-line"></i>
+                                Attendance Trend
                             </div>
-                            <div class="activity-list">
-                                <?php if (empty($recent_activities)): ?>
-                                <div class="no-data">
-                                    <i class="fas fa-history"></i>
-                                    <p>No recent activity</p>
-                                </div>
+                            <div class="chart-filter">
+                                <button class="filter-btn active" data-period="7">7 Days</button>
+                                <button class="filter-btn" data-period="30">30 Days</button>
+                                <button class="filter-btn" data-period="90">90 Days</button>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="attendanceChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Worker Distribution -->
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <div class="chart-title">
+                                <i class="fas fa-users-cog"></i>
+                                Worker Status
+                            </div>
+                        </div>
+                        <div class="distribution-item">
+                            <div class="distribution-label">
+                                <div class="distribution-dot" style="background: #27ae60;"></div>
+                                <span>On Site</span>
+                            </div>
+                            <div>
+                                <span class="distribution-number"><?php echo $on_site_today; ?></span>
+                                <span class="distribution-percent"><?php echo $attendance_rate; ?>%</span>
+                            </div>
+                        </div>
+                        <div class="distribution-item">
+                            <div class="distribution-label">
+                                <div class="distribution-dot" style="background: #f39c12;"></div>
+                                <span>On Leave</span>
+                            </div>
+                            <div>
+                                <span class="distribution-number"><?php echo $on_leave; ?></span>
+                                <span class="distribution-percent"><?php echo $total_workers > 0 ? round(($on_leave / $total_workers) * 100) : 0; ?>%</span>
+                            </div>
+                        </div>
+                        <div class="distribution-item">
+                            <div class="distribution-label">
+                                <div class="distribution-dot" style="background: #e74c3c;"></div>
+                                <span>Absent</span>
+                            </div>
+                            <div>
+                                <span class="distribution-number"><?php echo $total_workers - $on_site_today - $on_leave; ?></span>
+                                <span class="distribution-percent"><?php echo $total_workers > 0 ? round((($total_workers - $on_site_today - $on_leave) / $total_workers) * 100) : 0; ?>%</span>
+                            </div>
+                        </div>
+                        <div style="margin-top: 20px;">
+                            <canvas id="statusChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="quick-actions">
+                    <div class="chart-title">
+                        <i class="fas fa-bolt"></i>
+                        Quick Actions
+                    </div>
+                    <div class="quick-actions-grid">
+                        <a href="<?php echo BASE_URL; ?>/modules/super_admin/workers/add.php" class="quick-action-btn">
+                            <div class="quick-action-icon" style="background: rgba(52, 152, 219, 0.1); color: #3498db;">
+                                <i class="fas fa-user-plus"></i>
+                            </div>
+                            <div>
+                                <div class="quick-action-title">Add Worker</div>
+                                <div class="quick-action-desc">Register new employee</div>
+                            </div>
+                        </a>
+                        <a href="<?php echo BASE_URL; ?>/modules/super_admin/attendance/index.php" class="quick-action-btn">
+                            <div class="quick-action-icon" style="background: rgba(39, 174, 96, 0.1); color: #27ae60;">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div>
+                                <div class="quick-action-title">Mark Attendance</div>
+                                <div class="quick-action-desc">Record today's attendance</div>
+                            </div>
+                        </a>
+                        <a href="<?php echo BASE_URL; ?>/modules/super_admin/payroll/index.php" class="quick-action-btn">
+                            <div class="quick-action-icon" style="background: rgba(155, 89, 182, 0.1); color: #9b59b6;">
+                                <i class="fas fa-money-check-alt"></i>
+                            </div>
+                            <div>
+                                <div class="quick-action-title">Generate Payroll</div>
+                                <div class="quick-action-desc">Process payments</div>
+                            </div>
+                        </a>
+                        <a href="<?php echo BASE_URL; ?>/modules/super_admin/audit/index.php" class="quick-action-btn">
+                            <div class="quick-action-icon" style="background: rgba(243, 156, 18, 0.1); color: #f39c12;">
+                                <i class="fas fa-file-alt"></i>
+                            </div>
+                            <div>
+                                <div class="quick-action-title">View Reports</div>
+                                <div class="quick-action-desc">Analytics & insights</div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Recent Data Tables -->
+                <div class="tables-grid">
+                    <!-- Recent Attendance -->
+                    <div class="table-card">
+                        <div class="table-header">
+                            <div class="table-title">Recent Attendance</div>
+                            <a href="<?php echo BASE_URL; ?>/modules/super_admin/attendance/index.php" class="view-all">View All →</a>
+                        </div>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Worker</th>
+                                    <th>Time In</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if (empty($recent_attendance)): ?>
+                                <tr>
+                                    <td colspan="3" class="no-data">
+                                        <i class="fas fa-inbox"></i>
+                                        <p>No attendance records for today</p>
+                                    </td>
+                                </tr>
                                 <?php else: ?>
-                                    <?php foreach ($recent_activities as $activity): ?>
-                                    <div class="activity-item">
-                                        <div class="activity-icon activity-icon-<?php echo getActivityColor($activity['action']); ?>">
-                                            <i class="fas fa-<?php echo getActivityIcon($activity['action']); ?>"></i>
-                                        </div>
-                                        <div class="activity-content">
-                                            <div class="activity-text">
-                                                <strong><?php echo htmlspecialchars($activity['username'] ?? 'System'); ?></strong>
-                                                <span class="activity-action">
-                                                    <?php echo getEnhancedActivityDescription($activity); ?>
-                                                </span>
+                                    <?php foreach ($recent_attendance as $record): ?>
+                                    <tr>
+                                        <td>
+                                            <div class="worker-info">
+                                                <div class="worker-avatar">
+                                                    <?php echo getInitials($record['first_name'] . ' ' . $record['last_name']); ?>
+                                                </div>
+                                                <span><?php echo htmlspecialchars($record['first_name'] . ' ' . $record['last_name']); ?></span>
                                             </div>
-                                            <div class="activity-meta">
-                                                <span class="activity-time">
-                                                    <i class="far fa-clock"></i>
-                                                    <?php echo timeAgo($activity['created_at']); ?>
-                                                </span>
-                                                <span class="activity-badge badge-<?php echo $activity['action']; ?>">
-                                                    <?php echo strtoupper(str_replace('_', ' ', $activity['action'])); ?>
-                                                </span>
-                                                <?php if ($activity['table_name']): ?>
-                                                <span class="activity-module">
-                                                    <i class="far fa-folder"></i>
-                                                    <?php echo ucfirst(str_replace('_', ' ', $activity['table_name'])); ?>
-                                                </span>
-                                                <?php endif; ?>
-                                            </div>
-                                        </div>
-                                    </div>
+                                        </td>
+                                        <td><?php echo $record['time_in'] ? formatTime($record['time_in']) : '--'; ?></td>
+                                        <td>
+                                            <span class="status-badge status-<?php echo $record['status']; ?>">
+                                                <?php echo ucfirst($record['status']); ?>
+                                            </span>
+                                        </td>
+                                    </tr>
                                     <?php endforeach; ?>
                                 <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Today's Schedule -->
+                    <div class="table-card">
+                        <div class="table-header">
+                            <div class="table-title">Today's Shifts</div>
+                            <a href="<?php echo BASE_URL; ?>/modules/super_admin/schedule/index.php" class="view-all">View All →</a>
+                        </div>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Worker</th>
+                                    <th>Shift</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if (empty($today_schedules)): ?>
+                                <tr>
+                                    <td colspan="3" class="no-data">
+                                        <i class="fas fa-calendar-times"></i>
+                                        <p>No schedules for today</p>
+                                    </td>
+                                </tr>
+                                <?php else: ?>
+                                    <?php foreach ($today_schedules as $schedule): ?>
+                                    <tr>
+                                        <td>
+                                            <div class="worker-info">
+                                                <div class="worker-avatar">
+                                                    <?php echo getInitials($schedule['first_name'] . ' ' . $schedule['last_name']); ?>
+                                                </div>
+                                                <span><?php echo htmlspecialchars($schedule['first_name'] . ' ' . $schedule['last_name']); ?></span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <?php echo date('H:i', strtotime($schedule['start_time'])); ?> - 
+                                            <?php echo date('H:i', strtotime($schedule['end_time'])); ?>
+                                        </td>
+                                        <td>
+                                            <?php if ($schedule['has_attendance'] > 0): ?>
+                                                <span class="status-badge status-present">Checked In</span>
+                                            <?php else: ?>
+                                                <span class="status-badge status-pending">Pending</span>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Recent Activity Section -->
+                <div class="activity-section">
+                    <div class="table-card">
+                        <div class="table-header">
+                            <div class="table-title">
+                                <i class="fas fa-history"></i> Recent System Activity
                             </div>
+                        </div>
+                        <div class="activity-list">
+                            <?php if (empty($recent_activities)): ?>
+                            <div class="no-data">
+                                <i class="fas fa-history"></i>
+                                <p>No recent activity</p>
+                            </div>
+                            <?php else: ?>
+                                <?php foreach ($recent_activities as $activity): ?>
+                                <div class="activity-item">
+                                    <div class="activity-icon activity-icon-<?php echo getActivityColor($activity['action']); ?>">
+                                        <i class="fas fa-<?php echo getActivityIcon($activity['action']); ?>"></i>
+                                    </div>
+                                    <div class="activity-content">
+                                        <div class="activity-text">
+                                            <strong><?php echo htmlspecialchars($activity['username'] ?? 'System'); ?></strong>
+                                            <span class="activity-action">
+                                                <?php echo getEnhancedActivityDescription($activity); ?>
+                                            </span>
+                                        </div>
+                                        <div class="activity-meta">
+                                            <span class="activity-time">
+                                                <i class="far fa-clock"></i>
+                                                <?php echo timeAgo($activity['created_at']); ?>
+                                            </span>
+                                            <span class="activity-badge badge-<?php echo $activity['action']; ?>">
+                                                <?php echo strtoupper(str_replace('_', ' ', $activity['action'])); ?>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -605,7 +603,18 @@ function getEnhancedActivityDescription($activity) {
         </div>
     </div>
     
+    <!-- Pass PHP data to JavaScript -->
+    <script>
+        const attendanceTrendData = <?php echo json_encode($attendance_trend); ?>;
+        const workerStats = {
+            onSite: <?php echo $on_site_today; ?>,
+            onLeave: <?php echo $on_leave; ?>,
+            absent: <?php echo $total_workers - $on_site_today - $on_leave; ?>
+        };
+    </script>http://localhost/tracksite/modules/super_admin/audit/index.php
+    
     <!-- JavaScript -->
     <script src="<?php echo JS_URL; ?>/dashboard.js"></script>
+    <script src="<?php echo JS_URL; ?>/dashboard-enhanced.js"></script>
 </body>
 </html>
